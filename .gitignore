@@ -1,0 +1,45 @@
+# --- User Specific ---
+# Ignora la cartella dei dati di MySQL (come richiesto)
+mysql/
+certbot/
+nginx/
+# Se il tuo volume si chiama in modo diverso (comune in docker-compose)
+db_data/
+
+# --- Python & Django ---
+# Bytecode e cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cartella virtual environment (Pipenv, venv)
+.venv/
+venv/
+env/
+
+# File di ambiente - NON FARE IL COMMIT DI QUESTO
+.env
+.env.*
+
+# File statici e media raccolti (devono essere generati sul server)
+# (La cartella 'static' sorgente di solito è tracciata)
+staticfiles/
+media/
+
+# --- OS & Editor ---
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo

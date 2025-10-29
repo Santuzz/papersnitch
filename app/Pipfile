@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "==5.2.7"
+pymysql = "==1.1.2"
+asgiref = "==3.10.0"
+cffi = "==2.0.0"
+cryptography = "==46.0.3"
+dotenv = "==0.9.9"
+gunicorn = "==23.0.0"
+packaging = "==25.0"
+pycparser = "==2.23"
+python-dotenv = "==1.1.1"
+sqlparse = "==0.5.3"
+requests = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
