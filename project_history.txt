@@ -1,7 +1,25 @@
 Serviva un modo per ottenere le informazioni relative ai paper da analizzare reperibili sul sito della conferenza. 
 La metodologia scelta è stata quella dello scraping data l'indispobilità di API pubbliche per l'estrazione dei dati.
-In prima battuta si è pensato di optare per il servizio web di jina, il quale dato un https restituisce una versione compatta e schematizzata in markdown del sito. 
+In prima battuta si è pensato di optare per il servizio web di jina, 
+    il quale dato un https restituisce una versione compatta e schematizzata in markdown del sito. 
 
-Non restituiva però la totalità delle informazioni necessarie (le metareview), pertanto ho optato per utilizzare crawl4ai, una libreria dove è possibile delle configurazioni per lo scraping, il che lo rende più flessibile e adatto al nostro scopo.
-    Ho quindi creato un crawler che estrae le informazioni dei paper che si trovano nella pagina principale della conferenza (autori, titolo e link al paper), 
-    in seguito viene visitata la pagina del singolo paper per estrarre il resto delle informazioni (abstract, link al codice, dataset, DOI, supplementary material, review, author feedback e metareview).
+Non restituiva però la totalità delle informazioni necessarie (le metareview), 
+pertanto ho optato per utilizzare crawl4ai, una libreria dove è possibile delle configurazioni per lo scraping, 
+il che lo rende più flessibile e adatto al nostro scopo.
+Ho quindi creato un crawler che estrae le informazioni dei paper che si trovano nella 
+pagina principale della conferenza (autori, titolo e link al paper), 
+    in seguito viene visitata la pagina del singolo paper per estrarre il resto delle 
+    informazioni (abstract, link al codice, dataset, DOI, supplementary material, review, author feedback e metareview).
+
+3/11/2025
+Sono riuscito a scaricare i dati di tutti i paper dal sito del MICCAI, 
+    manca però il testo completo del pdf (da ragionare su come poi salvarlo su SQL), 
+    e ci sono alcuni campi che differiscono come nome da quello che poi dovrebbero avere sul db.
+    Tali dati li ho salvati in formato JSON, dovrò trovare un modo per poter caricare su db le varie entry.
+4/11/2025
+Ho provato ad utilizzare loaddata per caricare i dati sul db, 
+    ho avuto problemi con la formattazione del mio JSON e con i campi del database già esistente. 
+Ho dovuto quindi accedere al db tramite shell per eliminare le tabelle esistenti e rifare le migrations con django.
+Ora devo capire come recuperare il testo del pdf del paper ed inserirlo nel db.
+- Come mettere il timestamp quando uploado i file sul db?
+- Come aggiungere gli autori che avrò salvato come field nel json?

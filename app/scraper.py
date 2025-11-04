@@ -33,134 +33,6 @@ def get_response(url, timeout=10):
         return None
 
 
-def download_json(url, output_filename):
-
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    save_path = os.path.join(base_dir, output_filename)
-
-    print(f"Attempting to download from: {url}")
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-
-        data = response.json()
-
-        with open(save_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
-        print(f"File successfully saved to: {save_path}")
-
-    except requests.exceptions.HTTPError as errh:
-        print(f"Http Error: {errh}")
-    except requests.exceptions.ConnectionError as errc:
-        print(f"Error Connecting: {errc}")
-    except requests.exceptions.Timeout as errt:
-        print(f"Timeout Error: {errt}")
-    except requests.exceptions.RequestException as err:
-        print(f"An unexpected error occurred: {err}")
-    except IOError as e:
-        print(f"Error writing file to disk: {e}")
-
-
-def read_jina(url):
-    url = "https://r.jina.ai/" + url
-    response = get_response(url, timeout=1000)
-    # print(response.text)
-
-    text_content = {}
-    if response and response.status_code == 200:
-        lines = response.text.splitlines()
-
-    # get abstract
-    offset = 3
-    marker = "Abstract"
-    target_index = None
-
-    for index, line in enumerate(lines):
-        if marker in line:
-            target_index = index + offset
-
-            if target_index < len(lines):
-                text_content[marker.lower()] = lines[target_index].strip()
-            else:
-                print(f"Found '{marker}' but offset {offset} is out of bounds.")
-                return None
-            break
-
-    # get reviews
-    lines = lines[target_index:]
-    n = 1
-    offset = 2
-    marker = f"### Review #{n}"
-    marker_next = f"### Review #{n+1}"
-    marker_break = "Author Feedback"
-    target_start = None
-    target_end = None
-
-    for index, line in enumerate(lines):
-        if marker_break in line:
-            print(marker, target_start, index)
-            if target_start is not None and index is not None:
-                text_content[f"review_{n}"] = "\n".join(
-                    lines[target_start:index]
-                ).strip()
-            target_start = index + offset
-            break
-        if marker in line:
-            target_start = index + offset
-
-        if marker_next in line:
-            target_end = index
-            if target_start is not None and target_end is not None:
-                text_content[f"review_{n}"] = "\n".join(
-                    lines[target_start:target_end]
-                ).strip()
-                n += 1
-                marker = f"### Review #{n}"
-                marker_next = f"### Review #{n+1}"
-                target_start = target_end
-                target_end = None
-            # print(text_content)
-
-    print(text_content)
-
-
-def change_json(filename):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(base_dir, filename)
-    base_url = "https://papers.miccai.org"
-    no_url = 0
-
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        # get only the first entry
-        if data:
-            data = [data[0]]
-        for entry in data:
-            if "url" in entry:
-                entry["url"] = base_url + entry.get("url")
-                text_content = read_jina(entry["url"])
-                for key, value in text_content.items():
-                    entry[key] = value
-            else:
-                no_url += 1
-
-        if no_url > 0:
-            print(f"Number of entries without URL: {no_url}")
-
-        # with open(file_path, "w", encoding="utf-8") as f:
-        #     json.dump(data, f, ensure_ascii=False, indent=4)
-
-        print(f"File successfully updated: {file_path}")
-
-    except IOError as e:
-        print(f"Error reading or writing file: {e}")
-    except json.JSONDecodeError as e:
-        print(f"Error decoding JSON: {e}")
-
-
 text_content = {}
 
 
@@ -270,29 +142,20 @@ async def paper_crawling(url, schema):
 
 
 def clean_section(paper, section, section_name):
-    """
-    # take only the site (between these brackets <> and put it back as a list) from: CT-RATE-Chinese dataset: <https://huggingface.co/datasets/SiyouLi/CT-RATE-Chinese> CT-RATE-Mini dataset: <https://huggingface.co/datasets/SiyouLi/CT-RATE-Mini> to [
-    # {
-    #     "CT-RATE-Chinese_dataset": "https://huggingface.co/datasets/SiyouLi/CT-RATE-Chinese"
-    # },
-    # {"CT-RATE-Mini_dataset": "https://huggingface.co/datasets/SiyouLi/CT-RATE-Mini"},]
-    """
 
     if section_name == "link_to_the_dataset(s)":
         dataset_pattern = r"([^:]+):\s*<([^>]+)>"
         matches = re.findall(dataset_pattern, section)
-        datasets = []
-        for name, url in matches:
-            datasets.append({name.strip().replace(" ", "_"): url.strip()})
-        paper["Datasets"] = datasets
+        urls = [url.strip() for name, url in matches]
+        paper["datasets"] = ", ".join(urls) if urls else None
 
     elif section_name == "link_to_the_code_repository":
         code_pattern = r"<([^>]+)>"
         match = re.search(code_pattern, section)
         if match:
-            paper["code"] = match.group(1).strip()
+            paper["code_url"] = match.group(1).strip()
         else:
-            paper["code"] = None
+            paper["code_url"] = None
 
     elif section_name == "links_to_paper_and_supplementary_materials":
         # Extract DOI value (everything after "SpringerLink (DOI):" until newline)
@@ -315,11 +178,15 @@ def clean_section(paper, section, section_name):
         if supp_match:
             supp_value = supp_match.group(1).strip()
             if supp_value.lower() in ["not submitted", "not available"]:
-                paper["supp_material"] = None
+                paper["supp_materials"] = None
             else:
-                paper["supp_material"] = supp_value
+                paper["supp_materials"] = supp_value
         else:
-            paper["supp_material"] = None
+            paper["supp_materials"] = None
+
+    elif section_name == "meta-review":
+        paper["meta_review"] = section
+
     else:
         paper[section_name] = section
 
@@ -334,12 +201,15 @@ async def get_data(base_url, url, model=None, html_sample=None):
 
     # Paper crawling
     papers_list = []
+    count = 0  # TESTING
     for paper in home_data:
-
-        if paper["paper_link"]:
-            if not paper.get("paper_link").startswith("https://"):
-                paper["paper_link"] = base_url + paper.get("paper_link")
-            paper_sections = await paper_crawling(paper["paper_link"], schema)
+        if count >= 1:  # TESTING
+            break
+        count += 1  # TESTING
+        if paper["paper_url"]:
+            if not paper.get("paper_url").startswith("https://"):
+                paper["paper_url"] = base_url + paper.get("paper_url")
+            paper_sections = await paper_crawling(paper["paper_url"], schema)
             valid_sections = [
                 "abstract",
                 "links_to_paper_and_supplementary_materials",
@@ -359,48 +229,6 @@ async def get_data(base_url, url, model=None, html_sample=None):
     # Write all papers as a list of dictionaries
     with open(f"{MEDIA_DIR}/papers_info.json", "w", encoding="utf-8") as f:
         json.dump(papers_list, f, ensure_ascii=False, indent=4)
-
-
-def extract_specific(markdown_text, start, end=None):
-    """
-    Extract text between H1 headers with flexible pattern matching.
-
-    Args:
-        markdown_text: The markdown content to parse
-        start: Pattern to match in the starting H1 header (case-insensitive)
-        end: Optional pattern to match in the ending H1 header
-
-    Returns:
-        str: The extracted text between the headers
-    """
-    # Use case-insensitive matching for more flexibility
-    if end:
-        # Match text between two H1 headers
-        pattern = rf"^# .*?{re.escape(start)}.*?$\n(.*?)(?=^# |\Z)"
-    else:
-        # Match from H1 to end of file
-        pattern = rf"^# .*?{re.escape(start)}.*?$\n(.*?)(?=^# |\Z)"
-
-    match = re.search(pattern, markdown_text, re.MULTILINE | re.DOTALL | re.IGNORECASE)
-
-    if match:
-        content = match.group(1).strip()
-        # If end pattern is provided, check if we need to trim content
-        if end and content:
-            # Find where the next H1 with end pattern starts
-            end_match = re.search(
-                rf"(.*?)(?=^# .*?{re.escape(end)}|\Z)",
-                content,
-                re.MULTILINE | re.DOTALL | re.IGNORECASE,
-            )
-            if end_match:
-                content = end_match.group(1).strip()
-
-        text_content[start.lower().replace(" ", "_")] = content
-        return content
-
-    text_content[start.lower().replace(" ", "_")] = ""
-    return ""
 
 
 if __name__ == "__main__":
