@@ -59,18 +59,43 @@ Parallelizzato lo scraping dei singoli paper
 20/11/2025
 Creato un primo prototipo di chiamata a KIMI2, provato a testare il modello sul criterio di annotation. Aggiornato odckerfile
 
+21/11/2025
+Primi test funzionanti con kimi2, stesso risultato tra il testo in cui ho fornito il paper in formato txt e il testo in formato pdf
+Iniziata creazione della struttura dei criteri in modo che un LLM possa capire cosa cercare nel testo
+Testati modelli kimi2 e deepseekv3 su struttura di base, danno risposte diverse
+
+24/11/2025
+Aggiunti modelli seed, deepseek v3.1 con e senza thinking ai test. Separato il task di trovare il testo legato ad un criterio da quello di valutare tale testo.
+Dall'unico test effettuato, i migliori risultati si ottengono da deepseek v3.1 e kimi. 
+Il COT di deepseek aiuta ma la lentezza nel fornire la risposta potrebbe essere un problema siccoma è 10 volte più lento. 
+Va valutata la qualità dell'informazione in più ottenuta
+
+25/11/2025
+Divisa la parte di estrazione del testo da quella di scoring in due file distinti.
+La divisione non è stata una buona idea dato il raddoppio delle tempistiche nell'ottenere il risultato (20 sec per deepseek senza COT che era il più veloce).
+Aggiunto anche gpt e gemini ma non testato.
+
+Bloccato su come tenere traccia dei token utilizzati per ogni LLM.
+
+26/11/2025
+Creato file per tenere traccia dei token utilizzati per ogni LLM.
+gpt5.1 - Input tokens: 8483, Output tokens: 1403, Cumulative tokens: 9886, Time: 17.29s
+gpt5_mini - Input tokens: 8483, Output tokens: 3097, Cumulative tokens: 11580, Time: 39.24s
+gemini2.5_flash - Input tokens: 9207, Output tokens: 933, Cumulative tokens: 13783, Time: 21.21s
+
+
 TODO:
     - Estrazione dati dal pdf
     - Elaborazioni dati estratti con chatgpt
-    - Capire come gestire i file creati dal container (basta vederli dentro il container o è più comodo che anche l'host li abbia?)
-    - Mergare output di diversi LLm
-    - Conteggiare umero token usati per ogni chiamata LLM
-    - Controllare come funziona KIMI2 per le API
+    - Mergare output di diversi LLM
     - Controllare cosa è fattibile valutare senza LLM e con LLM
     - Parallelizzare la lettura dei pdf
-    - Finire di comprendere come funzionano le API di KIMI K2 (come ottenere il conteggio degli output token, vedere come funziona l'upload di pdf)
+    - Creare la pipeline che prenda i paper dal db, con anche le review, l'author feedback e le metareview. Combinare il tutto per poi passarlo agli LLM.
+    - GPT sembra il migliore nel rispondere, valutare la risposta per vedere se è così. Valutare anche che differenza c'è con la versione mini.
+    - Valutare i modelli lanciando le chiamate su 5 paper
+    - Dall'output degli LLM prendere il codice e confrontarlo con quello che c'è nel db, se presente
+    - Ottenere ciò che interessa dal codice (documentazione, markdown, etc.)
 
-   
 
 DOMANDE:
     - Come controllare se il pdf che c'è online sia aggiornato? è possibile che venga cambiato nel tempo?
@@ -78,6 +103,7 @@ DOMANDE:
     - Documenti creati dal container non disponibili nell'host ( a meno che il volume non sia vuoto), ci interessa avere?
     - Come gestire il codice (ottenibile da gitingest, https://gitingest.com/)
     - Qual è la palette di colore da associare ad un progetto del genere? (Blu profondo (#0A3D62 – #1B4F72) - Grigio neutro e grafite (#5A5A5A – #2E2E2E) - Ciano/Teal tecnologico (#1ABC9C – #0E8C82) - Ambra o giallo controllato (#F1C40F – #E2B90A) per alert - Bianco sporco (#F7F7F7) per sfondo al posto del bianco profondo)
+    - Ha senso dividere il task di estrazione delle informazioni da quello di scoring?
     
 SCORE:
 - Quali parti dello scoring posso essere affidate ad un LLM?

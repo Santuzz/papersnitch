@@ -13,7 +13,6 @@ services:
       - UV_CACHE_DIR=/tmp/uv-cache # Cache in /tmp for development
     env_file:
       - .env.local
-      - .env.llm
     depends_on:
       - mysql
     command: uv run manage.py runserver 0.0.0.0:8000
