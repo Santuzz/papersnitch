@@ -1,0 +1,155 @@
+[
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 1,
+    "fields": {
+      "model_key": "seed_flash",
+      "visual_name": "Seed 1.6 Flash",
+      "model": "seed-1-6-flash-250715",
+      "api_key_env_var": "BYTEPLUS_API_KEY",
+      "base_url": "https://ark.ap-southeast.bytepluses.com/api/v3",
+      "token_var": "TOTAL_TOKEN_BYTEPLUS_SEED_FLASH",
+      "temperature": 1.0,
+      "reasoning_effort": null,
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 2,
+    "fields": {
+      "model_key": "r1",
+      "visual_name": "Deepseek R1",
+      "model": "deepseek-r1-250528",
+      "api_key_env_var": "BYTEPLUS_API_KEY",
+      "base_url": "https://ark.ap-southeast.bytepluses.com/api/v3",
+      "token_var": "TOTAL_TOKEN_BYTEPLUS_SEED_FLASH",
+      "temperature": 1.0,
+      "reasoning_effort": null,
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 3,
+    "fields": {
+      "model_key": "gpt51_think",
+      "visual_name": "GPT-5.1 Thinking",
+      "model": "gpt-5.1",
+      "api_key_env_var": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1",
+      "token_var": "TOTAL_TOKEN_OPENAI",
+      "temperature": 1.0,
+      "reasoning_effort": "medium",
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 4,
+    "fields": {
+      "model_key": "gpt51",
+      "visual_name": "GPT-5.1",
+      "model": "gpt-5.1",
+      "api_key_env_var": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1",
+      "token_var": "TOTAL_TOKEN_OPENAI",
+      "temperature": 1.0,
+      "reasoning_effort": "none",
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 5,
+    "fields": {
+      "model_key": "gpt5_mini",
+      "visual_name": "GPT-5 Mini",
+      "model": "gpt-5-mini",
+      "api_key_env_var": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1",
+      "token_var": "TOTAL_TOKEN_OPENAI_MINI",
+      "temperature": 1.0,
+      "reasoning_effort": "medium",
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 6,
+    "fields": {
+      "model_key": "gpt5_nano",
+      "visual_name": "GPT-5 Nano",
+      "model": "gpt-5-nano",
+      "api_key_env_var": "OPENAI_API_KEY",
+      "base_url": "https://api.openai.com/v1",
+      "token_var": "TOTAL_TOKEN_OPENAI_MINI",
+      "temperature": 1.0,
+      "reasoning_effort": "medium",
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 7,
+    "fields": {
+      "model_key": "gemini25_flash",
+      "visual_name": "Gemini 2.5 Flash",
+      "model": "gemini-2.5-flash",
+      "api_key_env_var": "GEMINI_API_KEY",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+      "token_var": "TOTAL_TOKEN_GEMINI",
+      "temperature": 1.0,
+      "reasoning_effort": null,
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 8,
+    "fields": {
+      "model_key": "kimi_k2",
+      "visual_name": "Kimi K2",
+      "model": "kimi-k2-250905",
+      "api_key_env_var": "BYTEPLUS_API_KEY",
+      "base_url": "https://ark.ap-southeast.bytepluses.com/api/v3",
+      "token_var": "TOTAL_TOKEN_BYTEPLUS_KIMI_K2",
+      "temperature": 1.0,
+      "reasoning_effort": null,
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  },
+  {
+    "model": "webApp.llmmodelconfig",
+    "pk": 9,
+    "fields": {
+      "model_key": "deepseek31_NT",
+      "visual_name": "Deepseek v3.1",
+      "model": "deepseek-v3-1-250821",
+      "api_key_env_var": "BYTEPLUS_API_KEY",
+      "base_url": "https://ark.ap-southeast.bytepluses.com/api/v3",
+      "token_var": "TOTAL_TOKEN_BYTEPLUS_DEEPSEEK",
+      "temperature": 1.0,
+      "reasoning_effort": null,
+      "is_active": true,
+      "created_at": "2025-12-03T00:00:00Z",
+      "updated_at": "2025-12-03T00:00:00Z"
+    }
+  }
+]

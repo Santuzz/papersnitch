@@ -17,13 +17,41 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from .views import HomePageView, PaperSnitchLoginView
+from .views import (
+    HomePageView,
+    PaperSnitchLoginView,
+    SignUpView,
+    AnalyzePaperView,
+    AnalysisStatusView,
+    AnalysisCleanupView,
+    ProfileView,
+    AnalysisDetailView,
+    BugReportView,
+)
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
+    path("", AnalyzePaperView.as_view(), name="analyze"),
     path("accounts/", include("django.contrib.auth.urls")),
-    # path("accounts/login/", views.PaperSnitchLoginView.as_view(), name="login"),
     path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
-    path("home/", HomePageView.as_view(), name="homepage"),
-    # path("accounts/profile/", views.profile, name="profile"),
+    path("accounts/signup/", SignUpView.as_view(), name="signup"),
+    # path("home/", HomePageView.as_view(), name="homepage"),
+    path("profile/", ProfileView.as_view(), name="profile"),
+    path(
+        "profile/analysis/<int:analysis_id>/",
+        AnalysisDetailView.as_view(),
+        name="analysis_detail",
+    ),
+    path("analyze/", AnalyzePaperView.as_view(), name="analyze"),
+    path(
+        "analyze/status/<str:task_id>/",
+        AnalysisStatusView.as_view(),
+        name="analysis_status",
+    ),
+    path(
+        "analyze/cleanup/<str:task_id>/",
+        AnalysisCleanupView.as_view(),
+        name="analysis_cleanup",
+    ),
+    path("report-bug/", BugReportView.as_view(), name="bug_report"),
 ]

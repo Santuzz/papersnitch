@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head_title %}Feedback{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-comments mr-2"></i>Feedback</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Report Type Tabs -->
+                    <ul class="nav nav-tabs mb-4" id="feedbackTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="bug-tab" data-toggle="tab" href="#bug-content" role="tab">
+                                <i class="fas fa-bug mr-1 text-danger"></i> Report a Bug
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="suggestion-tab" data-toggle="tab" href="#suggestion-content" role="tab">
+                                <i class="fas fa-lightbulb mr-1 text-warning"></i> Suggestion
+                            </a>
+                        </li>
+                    </ul>
+
+                    <form method="post" enctype="multipart/form-data" id="feedback-form">
+                        {% csrf_token %}
+                        <input type="hidden" id="report_type" name="report_type" value="bug">
+
+                        <!-- Tab Content - Instructions -->
+                        <div class="tab-content mb-4">
+                            <div class="tab-pane fade show active" id="bug-content" role="tabpanel">
+                                <div class="alert alert-light border-left border-danger" style="border-left-width: 4px !important;">
+                                    <strong><i class="fas fa-bug mr-2 text-danger"></i>Report a Bug</strong>
+                                    <p class="mb-0 small text-muted">Found something that's not working correctly? Let us know so we can fix it.</p>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="suggestion-content" role="tabpanel">
+                                <div class="alert alert-light border-left border-warning" style="border-left-width: 4px !important;">
+                                    <strong><i class="fas fa-lightbulb mr-2 text-warning"></i>Make a Suggestion</strong>
+                                    <p class="mb-0 small text-muted">Have an idea for a new feature or improvement? We'd love to hear your suggestions!</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Title -->
+                        <div class="form-group">
+                            <label for="title" class="font-weight-bold">
+                                <i class="fas fa-heading mr-1 text-primary"></i><span id="title-label">Title</span> <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="title" name="title" 
+                                   placeholder="Brief summary..." required maxlength="200">
+                            <small class="form-text text-muted" id="title-help">A short, descriptive title.</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="form-group">
+                            <label for="description" class="font-weight-bold">
+                                <i class="fas fa-align-left mr-1 text-primary"></i><span id="description-label">Description</span> <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="description" name="description" rows="4" 
+                                      placeholder="Provide details..." required></textarea>
+                            <small class="form-text text-muted" id="description-help">Explain in detail.</small>
+                        </div>
+
+                        <!-- Bug-specific fields -->
+                        <div id="bug-fields">
+                            <!-- Steps to Reproduce -->
+                            <div class="form-group">
+                                <label for="steps_to_reproduce" class="font-weight-bold">
+                                    <i class="fas fa-list-ol mr-1 text-primary"></i>Steps to Reproduce
+                                </label>
+                                <textarea class="form-control" id="steps_to_reproduce" name="steps_to_reproduce" rows="3" 
+                                          placeholder="1. Go to...&#10;2. Click on...&#10;3. See error"></textarea>
+                                <small class="form-text text-muted">List the steps needed to reproduce the bug.</small>
+                            </div>
+
+                            <div class="row">
+                                <!-- Expected Behavior -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="expected_behavior" class="font-weight-bold">
+                                            <i class="fas fa-check-circle mr-1 text-success"></i>Expected Behavior
+                                        </label>
+                                        <textarea class="form-control" id="expected_behavior" name="expected_behavior" rows="3" 
+                                                  placeholder="What should have happened?"></textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Actual Behavior -->
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="actual_behavior" class="font-weight-bold">
+                                            <i class="fas fa-times-circle mr-1 text-danger"></i>Actual Behavior
+                                        </label>
+                                        <textarea class="form-control" id="actual_behavior" name="actual_behavior" rows="3" 
+                                                  placeholder="What actually happened?"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Priority -->
+                        <div class="form-group">
+                            <label for="priority" class="font-weight-bold">
+                                <i class="fas fa-flag mr-1 text-primary"></i><span id="priority-label">Priority</span>
+                            </label>
+                            <select class="form-control" id="priority" name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical" id="critical-option">Critical</option>
+                            </select>
+                        </div>
+
+                        <!-- Screenshot -->
+                        <div class="form-group">
+                            <label for="screenshot" class="font-weight-bold">
+                                <i class="fas fa-camera mr-1 text-primary"></i>Screenshot / Mockup (optional)
+                            </label>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="screenshot" name="screenshot" 
+                                       accept="image/*">
+                                <label class="custom-file-label" for="screenshot">Choose image...</label>
+                            </div>
+                            <small class="form-text text-muted">Upload an image to help illustrate your feedback.</small>
+                        </div>
+
+                        <!-- Browser Info (auto-filled) -->
+                        <input type="hidden" id="browser_info" name="browser_info">
+
+                        <hr>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'analyze' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left mr-2"></i>Back
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                                <i class="fas fa-paper-plane mr-2"></i>Submit Feedback
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips Card -->
+            <div class="card shadow mt-4" id="tips-card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0" id="tips-title"><i class="fas fa-lightbulb mr-2 text-warning"></i>Tips for Good Feedback</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0" id="tips-list">
+                        <li><strong>Be specific:</strong> Include exact error messages if any.</li>
+                        <li><strong>Be reproducible:</strong> Describe exact steps to reproduce the issue.</li>
+                        <li><strong>One issue per report:</strong> Submit separate reports for different issues.</li>
+                        <li><strong>Include context:</strong> What were you trying to do when the issue occurred?</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus {
+        border-color: #1ABC9C;
+        box-shadow: 0 0 0 0.2rem rgba(26, 188, 156, 0.25);
+    }
+    
+    .custom-file-input:focus ~ .custom-file-label {
+        border-color: #1ABC9C;
+        box-shadow: 0 0 0 0.2rem rgba(26, 188, 156, 0.25);
+    }
+    
+    .nav-tabs .nav-link {
+        color: #5a5a5a;
+    }
+    
+    .nav-tabs .nav-link.active {
+        font-weight: 600;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-fill browser info
+    const browserInfo = document.getElementById('browser_info');
+    browserInfo.value = navigator.userAgent;
+    
+    // File input label update
+    document.getElementById('screenshot').addEventListener('change', function(e) {
+        const fileName = e.target.files[0] ? e.target.files[0].name : 'Choose image...';
+        document.querySelector('.custom-file-label[for="screenshot"]').textContent = fileName;
+    });
+    
+    // Tab switching - update form based on report type
+    const tabs = document.querySelectorAll('#feedbackTabs .nav-link');
+    const bugFields = document.getElementById('bug-fields');
+    const reportTypeInput = document.getElementById('report_type');
+    const titleInput = document.getElementById('title');
+    const titleHelp = document.querySelector('#title-help');
+    const descriptionInput = document.getElementById('description');
+    const descriptionHelp = document.querySelector('#description-help');
+    const priorityLabel = document.getElementById('priority-label');
+    const criticalOption = document.getElementById('critical-option');
+    const submitBtn = document.getElementById('submit-btn');
+    const tipsList = document.getElementById('tips-list');
+    
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            const tabId = this.id;
+            
+            if (tabId === 'bug-tab') {
+                reportTypeInput.value = 'bug';
+                bugFields.style.display = 'block';
+                titleInput.placeholder = 'Brief summary of the bug';
+                titleHelp.textContent = 'A short, descriptive title for the bug.';
+                descriptionInput.placeholder = 'Describe the bug in detail...';
+                descriptionHelp.textContent = 'Explain what went wrong.';
+                priorityLabel.textContent = 'Priority';
+                criticalOption.style.display = 'block';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Bug Report';
+                tipsList.innerHTML = `
+                    <li><strong>Be specific:</strong> Include exact error messages if any.</li>
+                    <li><strong>Be reproducible:</strong> Describe exact steps to reproduce the issue.</li>
+                    <li><strong>One bug per report:</strong> Submit separate reports for different issues.</li>
+                    <li><strong>Include context:</strong> What were you trying to do when the bug occurred?</li>
+                `;
+            } else if (tabId === 'suggestion-tab') {
+                reportTypeInput.value = 'suggestion';
+                bugFields.style.display = 'none';
+                titleInput.placeholder = 'Brief summary of your suggestion';
+                titleHelp.textContent = 'A short, descriptive title for your suggestion.';
+                descriptionInput.placeholder = 'Describe your suggestion in detail. What feature or improvement would you like to see?';
+                descriptionHelp.textContent = 'Explain your idea and how it would help you.';
+                priorityLabel.textContent = 'Importance';
+                criticalOption.style.display = 'none';
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Submit Suggestion';
+                tipsList.innerHTML = `
+                    <li><strong>Be clear:</strong> Describe the feature or improvement you'd like to see.</li>
+                    <li><strong>Explain the benefit:</strong> How would this help you or other users?</li>
+                    <li><strong>Give examples:</strong> If possible, describe how you'd use this feature.</li>
+                    <li><strong>Be realistic:</strong> Consider the scope and feasibility of your suggestion.</li>
+                `;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,426 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head_title %}Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 px-4">
+    <div class="row">
+        <!-- Left Column - User Info -->
+        <div class="col-lg-3 col-md-4 mb-4">
+            <div class="card shadow sticky-top" style="top: 80px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user mr-2"></i>Profile</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-user-circle fa-5x text-muted"></i>
+                    </div>
+                    <hr>
+                    <p class="mb-2"><strong><i class="fas fa-at mr-2 text-primary"></i>Username:</strong><br>{{ user.username }}</p>
+                    <p class="mb-2"><strong><i class="fas fa-envelope mr-2 text-primary"></i>Email:</strong><br>{{ user.email|default:"Not provided" }}</p>
+                    <p class="mb-2"><strong><i class="fas fa-calendar-alt mr-2 text-primary"></i>Member since:</strong><br>{{ user.date_joined|date:"F d, Y" }}</p>
+                    <hr>
+                    <div class="text-center">
+                        <span class="badge badge-primary badge-pill px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-chart-bar mr-1"></i> {{ total_analyses }} Analyses
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Analysis History -->
+        <div class="col-lg-9 col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-history mr-2"></i>Analysis History</h5>
+                        <span class="badge badge-light">{{ papers_with_analyses|length }} Papers</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Search Box -->
+                    <div class="form-group mb-4">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" id="paper-search" 
+                                   placeholder="Search papers by title..." autocomplete="off">
+                        </div>
+                    </div>
+
+                    {% if papers_with_analyses %}
+                        <!-- Papers List -->
+                        <div id="papers-container">
+                            {% for paper_data in papers_with_analyses %}
+                            <div class="card paper-card mb-3" data-title="{{ paper_data.paper.title|lower }}">
+                                <div class="card-header bg-light paper-toggle" 
+                                     data-toggle="collapse" 
+                                     data-target="#paper-{{ paper_data.paper.id }}" 
+                                     aria-expanded="false"
+                                     style="cursor: pointer;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-chevron-right toggle-icon mr-3"></i>
+                                            <div>
+                                                <h6 class="mb-0 paper-title">{{ paper_data.paper.title|truncatechars:80 }}</h6>
+                                                <small class="text-muted">
+                                                    {{ paper_data.analyses|length }} analysis{{ paper_data.analyses|length|pluralize:"es" }} | 
+                                                    Last: {{ paper_data.latest_analysis|date:"M d, Y H:i" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <span class="badge badge-primary">{{ paper_data.analyses|length }}</span>
+                                    </div>
+                                </div>
+                                <div id="paper-{{ paper_data.paper.id }}" class="collapse">
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover mb-0">
+                                                <thead class="thead-light">
+                                                    <tr>
+                                                        <th>Model</th>
+                                                        <th>Date</th>
+                                                        <th>Duration</th>
+                                                        <th>Tokens</th>
+                                                        <th>Status</th>
+                                                        <th>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for analysis in paper_data.analyses %}
+                                                    <tr>
+                                                        <td>
+                                                            <span class="badge badge-info">{{ analysis.model_name }}</span>
+                                                        </td>
+                                                        <td>{{ analysis.created_at|date:"M d, Y H:i" }}</td>
+                                                        <td>{{ analysis.duration|floatformat:2 }}s</td>
+                                                        <td>
+                                                            <small>
+                                                                <i class="fas fa-arrow-down text-success"></i> {{ analysis.input_tokens|default:"-" }}
+                                                                <i class="fas fa-arrow-up text-danger ml-2"></i> {{ analysis.output_tokens|default:"-" }}
+                                                            </small>
+                                                        </td>
+                                                        <td>
+                                                            {% if analysis.error %}
+                                                                <span class="badge badge-danger">Error</span>
+                                                            {% else %}
+                                                                <span class="badge badge-success">Success</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            <button class="btn btn-sm btn-outline-primary view-analysis-btn" 
+                                                                    data-analysis-id="{{ analysis.id }}"
+                                                                    data-toggle="modal" 
+                                                                    data-target="#analysisModal">
+                                                                <i class="fas fa-eye"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- No Results Message -->
+                        <div id="no-results" class="text-center py-5" style="display: none;">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No papers found matching your search.</p>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-file-pdf fa-4x text-muted mb-4"></i>
+                            <h5 class="text-muted">No analyses yet</h5>
+                            <p class="text-muted">Start by analyzing a paper!</p>
+                            <a href="{% url 'analyze' %}" class="btn btn-primary">
+                                <i class="fas fa-plus mr-2"></i>Analyze a Paper
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analysis Detail Modal -->
+<div class="modal fade" id="analysisModal" tabindex="-1" role="dialog" aria-labelledby="analysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="analysisModalLabel">Analysis Details</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="analysis-modal-content">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Loading analysis...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .paper-card {
+        border-left: 4px solid #1ABC9C;
+        transition: all 0.2s ease;
+    }
+    
+    .paper-card:hover {
+        box-shadow: 0 4px 15px rgba(10, 61, 98, 0.15);
+    }
+    
+    .paper-toggle .toggle-icon {
+        transition: transform 0.3s ease;
+        color: #1ABC9C;
+    }
+    
+    .paper-toggle[aria-expanded="true"] .toggle-icon {
+        transform: rotate(90deg);
+    }
+    
+    .paper-title {
+        color: #0A3D62;
+    }
+    
+    .score-badge {
+        font-size: 1.2rem;
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: 600;
+    }
+    
+    .score-0 { background-color: #C0392B; color: white; }
+    .score-1 { background-color: #E74C3C; color: white; }
+    .score-2 { background-color: #F1C40F; color: #2E2E2E; }
+    .score-3 { background-color: #1ABC9C; color: white; }
+    .score-4 { background-color: #0E8C82; color: white; }
+    .score-5 { background-color: #0A3D62; color: white; }
+    
+    .criterion-card {
+        margin-bottom: 1rem;
+        border-left: 4px solid #1ABC9C;
+    }
+    
+    .extracted-text {
+        max-height: 150px;
+        overflow-y: auto;
+        background-color: #F7F7F7;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        border: 1px solid #E8E8E8;
+    }
+    
+    .dataset-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #1ABC9C 0%, #0E8C82 100%);
+        color: white;
+        padding: 4px 10px;
+        margin: 2px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+    }
+    
+    #paper-search:focus {
+        border-color: #1ABC9C;
+        box-shadow: 0 0 0 0.2rem rgba(26, 188, 156, 0.25);
+    }
+    
+    .highlight {
+        background-color: #F1C40F;
+        padding: 0 2px;
+        border-radius: 2px;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('paper-search');
+    const papersContainer = document.getElementById('papers-container');
+    const noResults = document.getElementById('no-results');
+    const paperCards = document.querySelectorAll('.paper-card');
+    
+    // Search functionality
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+            
+            paperCards.forEach(function(card) {
+                const title = card.dataset.title;
+                if (title.includes(searchTerm)) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Show/hide no results message
+            if (noResults) {
+                if (visibleCount === 0 && searchTerm !== '') {
+                    noResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'none';
+                }
+            }
+        });
+    }
+    
+    // View analysis button handler
+    document.querySelectorAll('.view-analysis-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const analysisId = this.dataset.analysisId;
+            loadAnalysisDetails(analysisId);
+        });
+    });
+    
+    function loadAnalysisDetails(analysisId) {
+        const modalContent = document.getElementById('analysis-modal-content');
+        modalContent.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p class="mt-2">Loading analysis...</p>
+            </div>
+        `;
+        
+        fetch(`/profile/analysis/${analysisId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    modalContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                modalContent.innerHTML = renderAnalysisDetails(data);
+            })
+            .catch(error => {
+                modalContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Failed to load analysis details.
+                    </div>
+                `;
+            });
+    }
+    
+    function renderAnalysisDetails(data) {
+        let html = `
+            <div class="mb-3">
+                <h6 class="text-primary"><i class="fas fa-file-alt mr-2"></i>${data.paper_title}</h6>
+                <div class="text-muted small">
+                    <span class="badge badge-info mr-2">${data.model_name}</span>
+                    <i class="fas fa-calendar mr-1"></i>${data.created_at} |
+                    <i class="fas fa-clock mr-1"></i>${data.duration}s |
+                    <i class="fas fa-arrow-down mr-1"></i>${data.input_tokens} tokens |
+                    <i class="fas fa-arrow-up mr-1"></i>${data.output_tokens} tokens
+                </div>
+            </div>
+        `;
+        
+        if (data.error) {
+            html += `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${data.error}
+                </div>
+            `;
+            return html;
+        }
+        
+        const result = data.raw_response;
+        if (!result) {
+            html += `<div class="alert alert-warning">No analysis data available.</div>`;
+            return html;
+        }
+        
+        // Code section
+        html += `
+            <div class="card criterion-card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-code mr-2"></i>Code Repository</h6>
+                </div>
+                <div class="card-body">
+                    ${result.code && result.code.extracted 
+                        ? (result.code.extracted.startsWith('http') 
+                            ? `<a href="${result.code.extracted}" target="_blank" class="btn btn-outline-primary btn-sm">${result.code.extracted}</a>`
+                            : `<p class="mb-0">${result.code.extracted}</p>`)
+                        : '<p class="text-muted mb-0">No code repository found</p>'}
+                </div>
+            </div>
+        `;
+        
+        // Datasets section
+        html += `
+            <div class="card criterion-card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-database mr-2"></i>Datasets</h6>
+                </div>
+                <div class="card-body">
+                    ${result.datasets && result.datasets.extracted && result.datasets.extracted.length > 0
+                        ? result.datasets.extracted.map(d => `<span class="dataset-badge">${d}</span>`).join('')
+                        : '<p class="text-muted mb-0">No datasets identified</p>'}
+                </div>
+            </div>
+        `;
+        
+        // Scored sections
+        const scoredSections = [
+            { key: 'annotation', icon: 'fa-tags', title: 'Annotation' },
+            { key: 'preprocessing', icon: 'fa-cogs', title: 'Preprocessing' },
+            { key: 'evaluation', icon: 'fa-chart-bar', title: 'Evaluation' },
+            { key: 'licensing_and_ethical_transparency', icon: 'fa-balance-scale', title: 'Licensing & Ethics' }
+        ];
+        
+        for (const section of scoredSections) {
+            const sectionData = result[section.key];
+            const score = sectionData && typeof sectionData.score === 'number' ? sectionData.score : 0;
+            
+            html += `
+                <div class="card criterion-card mb-3">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas ${section.icon} mr-2"></i>${section.title}</h6>
+                            <span class="score-badge score-${score}">${score}</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        ${sectionData && sectionData.extracted 
+                            ? `
+                                <h6 class="text-muted small">Extracted Information:</h6>
+                                <div class="extracted-text">${sectionData.extracted}</div>
+                                ${sectionData.score_explanation 
+                                    ? `<h6 class="text-muted small mt-3">Score Explanation:</h6><p class="mb-0 small">${sectionData.score_explanation}</p>`
+                                    : ''}
+                              `
+                            : '<p class="text-muted mb-0">No information extracted for this criterion</p>'}
+                    </div>
+                </div>
+            `;
+        }
+        
+        return html;
+    }
+});
+</script>
+{% endblock %}
