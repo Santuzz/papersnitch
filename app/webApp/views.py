@@ -1,23 +1,47 @@
 from django.shortcuts import render
 from django.contrib.auth.views import LoginView
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, JsonResponse
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
+from django.contrib import messages
+from django.http import JsonResponse
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from webApp.models import Operations
-from django.conf import settings
-from django.shortcuts import render, redirect, get_object_or_404
-import requests
-import os
-from pathlib import Path
-from urllib.parse import urlparse
-import json
+from webApp.models import Operations, Analysis, BugReport
+from django.shortcuts import render, redirect
+from .functions import upload_pdf
+
+from webApp.services.llm_analysis import (
+    create_analysis_task,
+    run_analysis_task,
+    get_task_status,
+    cleanup_task,
+    get_available_models,
+)
 
 
 class PaperSnitchLoginView(LoginView):
 
     template_name = "registration/login.html"
+
+
+class SignUpView(View):
+    """View for user registration."""
+
+    template_name = "registration/signup.html"
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            return redirect("analyze")
+        form = UserCreationForm()
+        return render(request, self.template_name, {"form": form})
+
+    def post(self, request):
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect("analyze")
+        return render(request, self.template_name, {"form": form})
 
 
 class HomePageView(View):
@@ -29,3 +53,199 @@ class HomePageView(View):
         operation = [ct.name for ct in operations]
 
         return render(request, self.template_name, {"operations": operation})
+
+
+class AnalyzePaperView(View):
+    """View for uploading and analyzing PDF papers."""
+
+    template_name = "webApp/analyze.html"
+
+    def get(self, request):
+        """Display the upload form with available models."""
+        available_models = get_available_models()
+        return render(
+            request, self.template_name, {"available_models": available_models}
+        )
+
+    def post(self, request):
+        """Handle PDF upload and start analysis. Requires login."""
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {"error": "You must be logged in to analyze papers"}, status=401
+            )
+        if "pdf_file" not in request.FILES:
+            return JsonResponse({"error": "No PDF file provided"}, status=400)
+
+        pdf_file = request.FILES["pdf_file"]
+
+        # Validate file type
+        if not pdf_file.name.endswith(".pdf"):
+            return JsonResponse({"error": "File must be a PDF"}, status=400)
+
+        # Get selected models from request
+        selected_models = request.POST.getlist("models")
+        if not selected_models:
+            return JsonResponse(
+                {"error": "Please select at least one model"}, status=400
+            )
+
+        # Save the uploaded file
+        paper = upload_pdf(pdf_file)
+        if paper is None:
+            return JsonResponse({"error": "Failed to upload PDF"}, status=500)
+
+        # Create analysis task with selected models and user
+        task_id = create_analysis_task(paper, selected_models, user_id=request.user.id)
+
+        # Start background analysis
+        run_analysis_task(task_id)
+
+        return JsonResponse({"task_id": task_id})
+
+
+class AnalysisStatusView(LoginRequiredMixin, View):
+    """View for checking analysis task status. Requires login."""
+
+    login_url = "/accounts/login/"
+
+    def get(self, request, task_id):
+        """Get the status of an analysis task."""
+        status = get_task_status(task_id)
+
+        if status is None:
+            return JsonResponse({"error": "Task not found"}, status=404)
+
+        return JsonResponse(status)
+
+
+class AnalysisCleanupView(LoginRequiredMixin, View):
+    """View for cleaning up completed analysis tasks. Requires login."""
+
+    login_url = "/accounts/login/"
+
+    def post(self, request, task_id):
+        """Clean up a completed task."""
+        cleanup_task(task_id)
+        return JsonResponse({"success": True})
+
+
+class ProfileView(LoginRequiredMixin, View):
+    """View for user profile with analysis history."""
+
+    template_name = "webApp/profile.html"
+    login_url = "/accounts/login/"
+
+    def get(self, request):
+        """Display user profile with analysis history grouped by paper."""
+        user = request.user
+
+        # Get all analyses for this user
+        analyses = (
+            Analysis.objects.filter(user=user)
+            .select_related("paper")
+            .order_by("-created_at")
+        )
+
+        # Group analyses by paper
+        papers_dict = {}
+        for analysis in analyses:
+            paper_id = analysis.paper.id
+            if paper_id not in papers_dict:
+                papers_dict[paper_id] = {
+                    "paper": analysis.paper,
+                    "analyses": [],
+                    "latest_analysis": analysis.created_at,
+                }
+            papers_dict[paper_id]["analyses"].append(analysis)
+
+        # Convert to list and sort by latest analysis date
+        papers_with_analyses = sorted(
+            papers_dict.values(), key=lambda x: x["latest_analysis"], reverse=True
+        )
+
+        context = {
+            "papers_with_analyses": papers_with_analyses,
+            "total_analyses": analyses.count(),
+        }
+
+        return render(request, self.template_name, context)
+
+
+class AnalysisDetailView(LoginRequiredMixin, View):
+    """API view to get analysis details for modal display."""
+
+    login_url = "/accounts/login/"
+
+    def get(self, request, analysis_id):
+        """Get analysis details as JSON."""
+        try:
+            analysis = Analysis.objects.select_related("paper").get(
+                id=analysis_id, user=request.user
+            )
+        except Analysis.DoesNotExist:
+            return JsonResponse({"error": "Analysis not found"}, status=404)
+
+        data = {
+            "id": analysis.id,
+            "paper_title": analysis.paper.title,
+            "model_name": analysis.model_name,
+            "model_key": analysis.model_key,
+            "created_at": analysis.created_at.strftime("%b %d, %Y %H:%M"),
+            "duration": analysis.duration,
+            "input_tokens": analysis.input_tokens,
+            "output_tokens": analysis.output_tokens,
+            "error": analysis.error,
+            "raw_response": analysis.raw_response,
+        }
+
+        return JsonResponse(data)
+
+
+class BugReportView(View):
+    """View for submitting bug reports and suggestions."""
+
+    template_name = "webApp/bug_report.html"
+
+    def get(self, request):
+        """Display the feedback form."""
+        return render(request, self.template_name)
+
+    def post(self, request):
+        """Handle feedback submission."""
+        report_type = request.POST.get("report_type", "bug")
+        title = request.POST.get("title", "").strip()
+        description = request.POST.get("description", "").strip()
+        steps_to_reproduce = request.POST.get("steps_to_reproduce", "").strip()
+        expected_behavior = request.POST.get("expected_behavior", "").strip()
+        actual_behavior = request.POST.get("actual_behavior", "").strip()
+        priority = request.POST.get("priority", "medium")
+        browser_info = request.POST.get("browser_info", "").strip()
+        screenshot = request.FILES.get("screenshot")
+
+        # Validate required fields
+        if not title or not description:
+            messages.error(request, "Title and description are required.")
+            return render(request, self.template_name)
+
+        # Create feedback report
+        bug_report = BugReport(
+            user=request.user if request.user.is_authenticated else None,
+            report_type=report_type,
+            title=title,
+            description=description,
+            steps_to_reproduce=steps_to_reproduce or None,
+            expected_behavior=expected_behavior or None,
+            actual_behavior=actual_behavior or None,
+            priority=priority,
+            browser_info=browser_info or None,
+            screenshot=screenshot,
+        )
+        bug_report.save()
+
+        # Custom success message based on report type
+        type_messages = {
+            "bug": "Thank you! Your bug report has been submitted. We will review it and work on a fix.",
+            "suggestion": "Thank you! Your suggestion has been submitted. We appreciate your ideas!",
+        }
+        messages.success(request, type_messages.get(report_type, type_messages["bug"]))
+        return redirect("bug_report")

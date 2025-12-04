@@ -24,33 +24,47 @@
     }
 </style>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark custom-navbar fixed-top">
-    <a class="navbar-brand" href="">
-        Paper<i class="fas fa-dollar-sign"></i>nitch
+<nav class="navbar navbar-expand-lg navbar-dark custom-navbar fixed-top">
+    <a class="navbar-brand">
+        <i class="fas fa-search" style="transform: rotate(90deg)"></i>aper<i class="fas fa-dollar-sign"></i>nitch
     </a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#main_nav" aria-expanded="false"
             aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="main_nav">
-    <ul class="navbar-nav ml-auto">
+    <ul class="navbar-nav ml-auto align-items-center">
+        <li class="nav-item">
+                <button class="btn btn-outline-light btn-sm my-auto" onclick="location.href='{% url 'bug_report' %}'" title="Feedback"> 
+                    <i class="fas fa-comments"></i> Feedback
+                </button>
+            </li>
         {% if user.is_authenticated %}
+            
             <li class="nav-item">
-                <a class="nav-link" href="" style="color: white;">
+                <a class="nav-link" href="{% url 'profile' %}" style="color: white;" title="Profile">
                     <i class="fas fa-user fa-lg"></i>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'logout' %}" style="color: white;"> 
-                    <i class="fas fa-sign-out-alt fa-lg"></i> 
+                <a class="nav-link" href="{% url 'analyze' %}" style="color: white;" title="Analyze Papers">
+                    <i class="fas fa-file-pdf fa-lg"></i>
                 </a>
+            </li>
+            <li class="nav-item">
+                <form method="post" action="{% url 'logout' %}" style="display: inline;"title="Logout">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link btn btn-link" style="color: white; ">
+                        <i class="fas fa-sign-out-alt fa-lg"></i>
+                    </button>
+                </form>
             </li>
         {% else %}
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'login' %}">Login</a>
+                <a class="nav-link" href="{% url 'analyze' %}"> <i class="fas fa-file-pdf fa-lg"></i> Analyze</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'register' %}">Registrati</a>
+                <a class="nav-link" href="{% url 'login' %}">Login</a>
             </li>
         {% endif %}
     </ul>
@@ -82,8 +96,8 @@
         crossorigin="anonymous"></script>
 
 </body>
-<footer class="bg-primary text-white text-center text-lg-start fixed-bottom">
-    <div class="text-center p-1" style="background-color: rgba(0.9, 0.1, 0.1, 0.8)">
+<footer class="text-white text-center text-lg-start fixed-bottom">
+    <div class="text-center p-1">
         <div class="footer" id="orario-data"></div>
     </div>
 </footer>

@@ -1,0 +1,56 @@
+[
+  {
+    "model": "webApp.criterion",
+    "pk": 1,
+    "fields": {
+      "name": "Code Repository",
+      "key": "code_repository",
+      "description": "A good repository documentation contains clear, complete, and actionable information that allows an external reader to fully understand, set up, and reproduce the codebase without prior knowledge. It should describe the purpose of the project, the structure of the repository, installation instructions, dependency and environment requirements, configuration details, data sources and preprocessing steps, execution commands for every major component, and explicit instructions for reproducing results, including how each script maps to the outputs reported in the associated work. It must also explain key assumptions, and provide examples or tutorials that demonstrate correct usage. Ultimately, good documentation removes ambiguity, exposes all operational steps, and enables a third party to rerun the entire pipeline reliably."
+    }
+  },
+  {
+    "model": "webApp.criterion",
+    "pk": 2,
+    "fields": {
+      "name": "Data Availability",
+      "key": "data_availability",
+      "description": "Only provide the names of the datasets used in the paper. If no dataset is used put null."
+    }
+  },
+  {
+    "model": "webApp.criterion",
+    "pk": 3,
+    "fields": {
+      "name": "Annotation",
+      "key": "annotation",
+      "description": "A good annotation description tells about how data annotations or labels were created, validated, and quality-controlled. This COULD includes: how labels were produced, who performed the annotation, what tools or platforms were used, what annotation guidelines were followed, the expertise or training of annotators, reported inter-annotator agreement metrics (e.g., Cohen's kappa, Fleiss' kappa, Krippendorff's alpha, percent agreement), how disagreements were resolved (consensus, arbitration, majority vote), and any procedures used to check or enforce annotation reliability."
+    }
+  },
+  {
+    "model": "webApp.criterion",
+    "pk": 4,
+    "fields": {
+      "name": "Preprocessing",
+      "key": "preprocessing",
+      "description": "A good prepocessing description tell about all transformations applied to raw data before training or evaluation. This COULD includes explicit preprocessing steps such as resampling, cropping, normalization, and augmentation; numerical parameters such as input dimensions, value ranges, and augmentation probabilities; description of the augmentation pipeline; motivations for each preprocessing step; and any software libraries, frameworks, or pipelines used."
+    }
+  },
+  {
+    "model": "webApp.criterion",
+    "pk": 5,
+    "fields": {
+      "name": "Evaluation",
+      "key": "evaluation",
+      "description": "A good evaluation description tell about completeness and transparency of the experimental evaluation setup. This COULD includes train/validation/test data splits, stratification, subject-wise splits, cross-validation strategies (e.g., k-fold, leave-one-out), performance metrics used, uncertainty or variability reporting (standard deviations, confidence intervals, repeated runs, random seeds), details of the experimental setup such as hyperparameters, epochs, hardware, search methods, and any robustness, ablation, or sensitivity analyses."
+    }
+  },
+  {
+    "model": "webApp.criterion",
+    "pk": 6,
+    "fields": {
+      "name": "Licensing & Ethical Transparency",
+      "key": "licensing_and_ethical_transparency",
+      "description": "A good Licensing & Ethical Transparency description tells about legal, ethical, and compliance information for datasets, code, and experiments involving human subjects. This COULD includes dataset and code licensing terms (e.g., CC-BY, CC-BY-NC, MIT, GPL), any usage restrictions, ethical approvals or IRB statements, informed consent procedures, anonymization or pseudonymization methods, and discussions of privacy protection, risks, societal impact, bias, or limitations."
+    }
+  }
+]

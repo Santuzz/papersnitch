@@ -53,13 +53,11 @@ class Paper(BaseModel):
     )
 
 
-def get_code(url, file=None):
-    if file is not None and os.path.exists(file):
-        ingest(url, output=file, include_patterns=["*.md", "docs/", "*.ipynb"])
+def get_code_documentation(url, file=None):
+    # if file is not None and os.path.exists(file):
+    #     ingest(url, output=file, include_patterns=["*.md", "docs/", "*.ipynb"])
 
-    summary, tree, content = ingest(
-        url, output=file, include_patterns=["*.md", "docs/", "*.ipynb"]
-    )
+    summary, tree, content = ingest(url, include_patterns=["*.md", "docs/", "*.ipynb"])
     return {"summary": summary, "tree": tree, "content": content}
 
 

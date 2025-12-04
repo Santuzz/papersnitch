@@ -9,6 +9,7 @@ import requests
 import django
 from django.core.files.base import ContentFile
 import os
+from pypdf import PdfReader
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "web.settings")
 django.setup()
@@ -233,4 +234,23 @@ if __name__ == "__main__":
         args.confUrl = "https://papers.miccai.org/miccai-2025/"
 
     print(f"Loading papers from: {json_file}")
-    load_data(json_file, args.confName, args.confYear, args.confUrl)
+    # load_data(json_file, args.confName, args.confYear, args.confUrl)
+
+    paper = {"pdf_url": "https://papers.miccai.org/miccai-2025/paper/0752_paper.pdf"}
+    response = requests.get(paper["pdf_url"], timeout=30)
+    response.raise_for_status()
+    # per ottenere i byte che compongono il PDF
+    pdf_content = response.content
+
+    name = paper["pdf_url"].split("/")[-1]
+    name = f"{args.confName.lower()}_{args.confYear}_{name}"
+    with open(MEDIA_ROOT / "pdf" / name, "wb") as f:
+        f.write(pdf_content)
+
+    reader = PdfReader(MEDIA_ROOT / "pdf" / name)
+    pages = reader.pages
+    text = ""
+    for page in pages:
+        text = text + page.extract_text()
+    with open(MEDIA_ROOT / "pdf" / f"{name.split('.')[0]}.txt", "w") as text_file:
+        text_file.write(text)

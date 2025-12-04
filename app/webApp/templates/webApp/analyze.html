@@ -1,0 +1,702 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head_title %}Analyze Paper{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow" style="position: relative;">
+                {% if not user.is_authenticated %}
+                <!-- Login Required Overlay -->
+                <div id="login-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.95); z-index: 100; display: flex; align-items: center; justify-content: center; border-radius: 0.25rem;">
+                    <div class="text-center p-5">
+                        <i class="fas fa-lock fa-4x text-primary mb-4"></i>
+                        <h3 class="mb-3">Login Required</h3>
+                        <p class="text-muted mb-4">You need to be logged in to analyze a paper.<br>Please login or create an account to continue.</p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="{% url 'login' %}" class="btn btn-primary btn-lg mr-2">
+                                <i class="fas fa-sign-in-alt mr-2"></i>Login
+                            </a>
+                            <a href="{% url 'signup' %}" class="btn btn-outline-primary btn-lg">
+                                <i class="fas fa-user-plus mr-2"></i>Sign Up
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-file-pdf mr-2"></i>Paper Analysis</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Upload Form -->
+                    <div id="upload-section">
+                        <form id="upload-form" enctype="multipart/form-data" autocomplete="off">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="pdf-file" class="font-weight-bold">Upload PDF Paper</label>
+                                <div class="custom-file">
+                                    <input type="file" class="custom-file-input" id="pdf-file" name="pdf_file" accept=".pdf" required autocomplete="off">
+                                    <label class="custom-file-label" for="pdf-file">Choose PDF file...</label>
+                                </div>
+                                <small class="form-text text-muted">Upload a scientific paper in PDF format for analysis.</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="font-weight-bold mb-0">Select Models for Analysis</label>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="select-all-models-btn">
+                                        <i class="fas fa-lg fa-check mr-1"></i>Select All
+                                    </button>
+                                </div>
+                                <div class="model-checkboxes">
+                                    {% for model_key, visual_name in available_models.items %}
+                                    <div class="custom-control custom-checkbox custom-control-inline">
+                                        <input type="checkbox" class="custom-control-input model-checkbox" id="model-{{ model_key }}" name="models" value="{{ model_key }}">
+                                        <label class="custom-control-label" for="model-{{ model_key }}">{{ visual_name }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="form-text text-muted">Select at least one model to analyze the paper.</small>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg btn-block" id="analyze-btn" disabled>
+                                <i class="fas fa-search mr-2"></i>Analyze
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Progress Section (Hidden initially) -->
+                    <div id="progress-section" style="display: none;">
+                        <h5 class="mb-3"><i class="fas fa-terminal mr-2"></i>Analysis in Progress</h5>
+                        <div class="terminal-output" id="terminal-log">
+                            <!-- Log lines will be added here dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Results Section (Hidden initially) -->
+                    <div id="results-section" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0"><i class="fas fa-check-circle text-success mr-2"></i>Analysis Complete</h5>
+                            <button class="btn btn-outline-primary" id="new-analysis-btn">
+                                <i class="fas fa-plus mr-2"></i>New Analysis
+                            </button>
+                        </div>
+                        
+                        <!-- Model Tabs -->
+                        <ul class="nav nav-tabs" id="model-tabs" role="tablist">
+                            <!-- Tabs will be dynamically inserted here -->
+                        </ul>
+                        
+                        <!-- Tab Content -->
+                        <div class="tab-content border border-top-0 p-3" id="model-tab-content">
+                            <!-- Content will be dynamically inserted here -->
+                        </div>
+                    </div>
+
+                    <!-- Error Section (Hidden initially) -->
+                    <div id="error-section" style="display: none;">
+                        <div class="alert alert-danger" role="alert">
+                            <h5><i class="fas fa-exclamation-triangle mr-2"></i>Error</h5>
+                            <p id="error-message"></p>
+                            <button class="btn btn-outline-danger" id="retry-btn">
+                                <i class="fas fa-redo mr-2"></i>Try Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .score-badge {
+        font-size: 1.5rem;
+        width: 50px;
+        height: 50px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .score-0 { background-color: #C0392B; color: white; }
+    .score-1 { background-color: #E74C3C; color: white; }
+    .score-2 { background-color: #F1C40F; color: #2E2E2E; }
+    .score-3 { background-color: #1ABC9C; color: white; }
+    .score-4 { background-color: #0E8C82; color: white; }
+    .score-5 { background-color: #0A3D62; color: white; }
+    
+    /* Terminal-style output */
+    .terminal-output {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.9rem;
+        padding: 15px;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .terminal-line {
+        margin-bottom: 6px;
+        line-height: 1.5;
+    }
+    
+    .terminal-prompt {
+        color: #1ABC9C;
+        font-weight: bold;
+        margin-right: 8px;
+    }
+    
+    .terminal-success {
+        color: #4EC9B0;
+    }
+    
+    .terminal-info {
+        color: #9CDCFE;
+    }
+    
+    .terminal-warning {
+        color: #DCDCAA;
+    }
+    
+    .terminal-error {
+        color: #F14C4C;
+    }
+    
+    .terminal-time {
+        color: #6A9955;
+        font-size: 0.8rem;
+    }
+    
+    .criterion-card {
+        margin-bottom: 1rem;
+        border-left: 4px solid #1ABC9C;
+        background-color: #FFFFFF;
+        transition: box-shadow 0.2s ease;
+    }
+    
+    .criterion-card:hover {
+        box-shadow: 0 4px 15px rgba(10, 61, 98, 0.15);
+    }
+    
+    .extracted-text {
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: #F7F7F7;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        border: 1px solid #E8E8E8;
+        color: #2E2E2E;
+    }
+    
+    .dataset-list {
+        list-style: none;
+        padding-left: 0;
+    }
+    
+    .dataset-list li {
+        display: inline-block;
+        background: linear-gradient(135deg, #1ABC9C 0%, #0E8C82 100%);
+        color: white;
+        padding: 6px 14px;
+        margin: 3px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    #progress-section h5 {
+        color: #0A3D62;
+    }
+    
+    #results-section h5 {
+        color: #0E8C82;
+    }
+    
+    .card-header h6 {
+        color: #2E2E2E;
+    }
+    
+    .card-header h6 i {
+        color: #1ABC9C;
+    }
+    
+    .model-checkboxes {
+        padding: 12px;
+        background-color: #F7F7F7;
+        border-radius: 6px;
+        border: 1px solid #E8E8E8;
+    }
+    
+    .model-checkboxes .custom-control {
+        margin: 5px 15px 5px 0;
+    }
+    
+    .model-checkboxes .custom-control-label {
+        color: #2E2E2E;
+        font-weight: 500;
+    }
+    
+    .custom-control-input:checked ~ .custom-control-label::before {
+        background-color: #1ABC9C;
+        border-color: #0E8C82;
+    }
+    
+    .card-header.collapsible {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .card-header.collapsible:hover {
+        background-color: #E8E8E8 !important;
+    }
+    
+    .card-header.collapsible .toggle-icon {
+        transition: transform 0.3s ease;
+    }
+    
+    .card-header.collapsible.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .criterion-card .card-body {
+        border-top: 1px solid #E8E8E8;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('upload-form');
+    const uploadSection = document.getElementById('upload-section');
+    const progressSection = document.getElementById('progress-section');
+    const resultsSection = document.getElementById('results-section');
+    const errorSection = document.getElementById('error-section');
+    const terminalLog = document.getElementById('terminal-log');
+    const errorMessage = document.getElementById('error-message');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const newAnalysisBtn = document.getElementById('new-analysis-btn');
+    const retryBtn = document.getElementById('retry-btn');
+    
+    let currentTaskId = null;
+    let pollInterval = null;
+    let lastStep = '';
+    let startTime = null;
+    
+    // Function to add a log line to the terminal
+    function addLogLine(message, type = 'info') {
+        const line = document.createElement('div');
+        line.className = 'terminal-line';
+        
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+        
+        let icon = '';
+        let textClass = 'terminal-info';
+        
+        switch(type) {
+            case 'success':
+                icon = '✓';
+                textClass = 'terminal-success';
+                break;
+            case 'error':
+                icon = '✗';
+                textClass = 'terminal-error';
+                break;
+            case 'warning':
+                icon = '⚠';
+                textClass = 'terminal-warning';
+                break;
+            case 'spinner':
+                icon = '●';
+                textClass = 'terminal-info';
+                break;
+            default:
+                icon = '→';
+                textClass = 'terminal-info';
+        }
+        
+        line.innerHTML = `<span class="terminal-time">[${timeStr}]</span> <span class="terminal-prompt">${icon}</span> <span class="${textClass}">${message}</span>`;
+        terminalLog.appendChild(line);
+        terminalLog.scrollTop = terminalLog.scrollHeight;
+    }
+    
+    // Clear file input on page load to prevent browser restore
+    const pdfFileInput = document.getElementById('pdf-file');
+    const modelCheckboxes = document.querySelectorAll('.model-checkbox');
+    pdfFileInput.value = '';
+    document.querySelector('.custom-file-label').textContent = 'Choose PDF file...';
+    analyzeBtn.disabled = true;
+    
+    // Function to check if analyze button should be enabled
+    function updateAnalyzeButton() {
+        const hasFile = pdfFileInput.files && pdfFileInput.files[0];
+        const hasModel = document.querySelectorAll('.model-checkbox:checked').length > 0;
+        analyzeBtn.disabled = !(hasFile && hasModel);
+    }
+    
+    // File input label update
+    pdfFileInput.addEventListener('change', function(e) {
+        const fileName = e.target.files[0] ? e.target.files[0].name : 'Choose PDF file...';
+        document.querySelector('.custom-file-label').textContent = fileName;
+        updateAnalyzeButton();
+    });
+    
+    // Model checkbox change handler
+    modelCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', updateAnalyzeButton);
+    });
+    
+    // Select All / Deselect All button handler
+    const selectAllBtn = document.getElementById('select-all-models-btn');
+    selectAllBtn.addEventListener('click', function() {
+        const allChecked = Array.from(modelCheckboxes).every(cb => cb.checked);
+        modelCheckboxes.forEach(function(checkbox) {
+            checkbox.checked = !allChecked;
+        });
+        // Update button text
+        if (allChecked) {
+            selectAllBtn.innerHTML = '<i class="fas fa-lg fa-check mr-1"></i>Select All';
+        } else {
+            selectAllBtn.innerHTML = '<i class="fas fa-lg fa-times mr-1"></i>Deselect All';
+        }
+        updateAnalyzeButton();
+    });
+    
+    // Update Select All button text when individual checkboxes change
+    function updateSelectAllButton() {
+        const allChecked = Array.from(modelCheckboxes).every(cb => cb.checked);
+        if (allChecked && modelCheckboxes.length > 0) {
+            selectAllBtn.innerHTML = '<i class="fas fa-lg fa-times mr-1"></i>Deselect All';
+        } else {
+            selectAllBtn.innerHTML = '<i class="fas fa-lg fa-check mr-1"></i>Select All';
+        }
+    }
+    
+    modelCheckboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', updateSelectAllButton);
+    });
+    
+    // Upload form submission
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(uploadForm);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Uploading...';
+        
+        try {
+            const response = await fetch('{% url "analyze" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            // Handle non-OK responses before trying to parse JSON
+            if (!response.ok) {
+                if (response.status === 413) {
+                    showError('File too large. Maximum size is 50MB.');
+                    return;
+                }
+                // Try to get error message from response
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    showError(errorData.error || `Upload failed (${response.status})`);
+                } else {
+                    showError(`Upload failed with status ${response.status}`);
+                }
+                return;
+            }
+
+            const data = await response.json();
+            
+            currentTaskId = data.task_id;
+            showProgress();
+            startPolling();
+        } catch (error) {
+            showError('Network error: ' + error.message);
+        }
+    });
+    
+    // New analysis button
+    newAnalysisBtn.addEventListener('click', function() {
+        resetForm();
+    });
+    
+    // Retry button
+    retryBtn.addEventListener('click', function() {
+        resetForm();
+    });
+    
+        function showProgress() {
+            uploadSection.style.display = 'none';
+            progressSection.style.display = 'block';
+            resultsSection.style.display = 'none';
+            errorSection.style.display = 'none';
+            // Clear terminal and add initial message
+            terminalLog.innerHTML = '';
+            lastStep = '';
+            addLogLine('Initializing analysis...', 'spinner');
+        }
+    
+        function showResults(results) {
+        // Add success message to terminal before transitioning
+        addLogLine('Analysis completed successfully!', 'success');
+        setTimeout(function() {
+            uploadSection.style.display = 'none';
+            progressSection.style.display = 'none';
+            resultsSection.style.display = 'block';
+            errorSection.style.display = 'none';
+            renderResults(results);
+        }, 1000);
+    }
+    
+    function showError(message) {
+        // Add error message to terminal before transitioning
+        addLogLine('Error: ' + message, 'error');
+        setTimeout(function() {
+            uploadSection.style.display = 'none';
+            progressSection.style.display = 'none';
+            resultsSection.style.display = 'none';
+            errorSection.style.display = 'block';
+            errorMessage.textContent = message;
+        }, 500);
+    }
+    
+    function resetForm() {
+        uploadSection.style.display = 'block';
+        progressSection.style.display = 'none';
+        resultsSection.style.display = 'none';
+        errorSection.style.display = 'none';
+        uploadForm.reset();
+        document.querySelector('.custom-file-label').textContent = 'Choose PDF file...';
+        // Uncheck all model checkboxes
+        modelCheckboxes.forEach(function(checkbox) {
+            checkbox.checked = false;
+        });
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Analyze';
+        // Reset terminal
+        terminalLog.innerHTML = '';
+        lastStep = '';
+        currentTaskId = null;
+    }
+    
+    function updateProgress(progress, status) {
+        // Only add new log line if status changed
+        if (status && status !== lastStep) {
+            addLogLine(status, 'spinner');
+            lastStep = status;
+        }
+    }
+    
+    function startPolling() {
+        pollInterval = setInterval(async function() {
+            if (!currentTaskId) {
+                clearInterval(pollInterval);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/analyze/status/${currentTaskId}/`);
+                const data = await response.json();
+                
+                if (data.error && response.status === 404) {
+                    clearInterval(pollInterval);
+                    showError('Task not found');
+                    return;
+                }
+                
+                updateProgress(data.progress, data.current_step);
+                
+                if (data.status === 'completed') {
+                    clearInterval(pollInterval);
+                    showResults(data.results);
+                } else if (data.status === 'error') {
+                    clearInterval(pollInterval);
+                    showError(data.error || 'Analysis failed');
+                }
+            } catch (error) {
+                clearInterval(pollInterval);
+                showError('Connection error: ' + error.message);
+            }
+        }, 1000);
+    }
+    
+    function renderResults(results) {
+        const tabsContainer = document.getElementById('model-tabs');
+        const contentContainer = document.getElementById('model-tab-content');
+        
+        tabsContainer.innerHTML = '';
+        contentContainer.innerHTML = '';
+        
+        let isFirst = true;
+        
+        for (const [modelKey, modelData] of Object.entries(results)) {
+            // Create tab
+            const tabLi = document.createElement('li');
+            tabLi.className = 'nav-item';
+            tabLi.innerHTML = `
+                <a class="nav-link ${isFirst ? 'active' : ''}" 
+                   id="${modelKey}-tab" 
+                   data-toggle="tab" 
+                   href="#${modelKey}-content" 
+                   role="tab">
+                    ${modelData.model}
+                    ${modelData.error ? '<i class="fas fa-exclamation-circle text-danger ml-1"></i>' : ''}
+                </a>
+            `;
+            tabsContainer.appendChild(tabLi);
+            
+            // Create tab content
+            const tabContent = document.createElement('div');
+            tabContent.className = `tab-pane fade ${isFirst ? 'show active' : ''}`;
+            tabContent.id = `${modelKey}-content`;
+            tabContent.setAttribute('role', 'tabpanel');
+            
+            if (modelData.error) {
+                tabContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> ${modelData.error}
+                    </div>
+                `;
+            } else {
+                tabContent.innerHTML = renderModelResult(modelData);
+            }
+            
+            contentContainer.appendChild(tabContent);
+            
+            isFirst = false;
+        }
+    }
+    
+    function renderModelResult(modelData) {
+        const result = modelData.result;
+        const uniqueId = Math.random().toString(36).substr(2, 9);
+        
+        let html = `
+            <div class="mb-3 text-muted">
+                <small>
+                    <i class="fas fa-clock mr-1"></i>Duration: ${modelData.duration}s | 
+                    <i class="fas fa-arrow-down mr-1"></i>Input: ${modelData.input_tokens} tokens | 
+                    <i class="fas fa-arrow-up mr-1"></i>Output: ${modelData.output_tokens} tokens
+                </small>
+            </div>
+        `;
+        
+        // Code section (with score like other criteria)
+        const codeData = result.code || {};
+        const codeScore = codeData.score !== undefined ? codeData.score : null;
+        html += `
+            <div class="card criterion-card">
+                <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#code-${uniqueId}" aria-expanded="true">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-code mr-2"></i>Code Repository</h6>
+                        <div class="d-flex align-items-center">
+                            ${codeScore !== null ? `<span class="badge score-badge score-${codeScore} mr-2">${codeScore}</span>` : ''}
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div id="code-${uniqueId}" class="collapse show">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Repository URL:</strong><br>
+                            ${codeData.url && codeData.url.startsWith('http')
+                                ? `<a href="${codeData.url}" target="_blank" class="btn btn-outline-primary btn-sm mt-1"><i class="fas fa-external-link-alt mr-1"></i>${codeData.url}</a>`
+                                : '<span class="text-muted">No repository URL found</span>'}
+                        </div>
+                        ${codeData.extracted ? `
+                        <div class="mb-3">
+                            <strong>Extracted Information:</strong>
+                            <div class="extracted-text mt-1">${codeData.extracted}</div>
+                        </div>
+                        ` : ''}
+                        ${codeData.score_explanation ? `
+                        <div>
+                            <strong>Score Explanation:</strong>
+                            <p class="mb-0 mt-1">${codeData.score_explanation}</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Datasets section
+        html += `
+            <div class="card criterion-card">
+                <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#datasets-${uniqueId}" aria-expanded="true">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-database mr-2"></i>Datasets</h6>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                </div>
+                <div id="datasets-${uniqueId}" class="collapse show">
+                    <div class="card-body">
+                        ${result.datasets && result.datasets.extracted && result.datasets.extracted.length > 0
+                            ? `<ul class="dataset-list mb-0">${result.datasets.extracted.map(d => `<li>${d}</li>`).join('')}</ul>`
+                            : '<p class="text-muted mb-0">No datasets identified</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Scored sections
+        const scoredSections = [
+            { key: 'annotation', icon: 'fa-tags', title: 'Annotation' },
+            { key: 'preprocessing', icon: 'fa-cogs', title: 'Preprocessing' },
+            { key: 'evaluation', icon: 'fa-chart-bar', title: 'Evaluation' },
+            { key: 'licensing_and_ethical_transparency', icon: 'fa-balance-scale', title: 'Licensing & Ethics' }
+        ];
+        
+        for (const section of scoredSections) {
+            const data = result[section.key];
+            const score = data && typeof data.score === 'number' ? data.score : 0;
+            const collapseId = `${section.key}-${uniqueId}`;
+            
+            html += `
+                <div class="card criterion-card">
+                    <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#${collapseId}" aria-expanded="true">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas ${section.icon} mr-2"></i>${section.title}</h6>
+                            <div class="d-flex align-items-center">
+                                <span class="score-badge score-${score} mr-2">${score}</span>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="${collapseId}" class="collapse show">
+                        <div class="card-body">
+                            ${data && data.extracted 
+                                ? `
+                                    <h6 class="text-muted">Extracted Information:</h6>
+                                    <div class="extracted-text">${data.extracted}</div>
+                                    ${data.score_explanation 
+                                        ? `<h6 class="text-muted mt-3">Score Explanation:</h6><p class="mb-0">${data.score_explanation}</p>`
+                                        : ''}
+                                  `
+                                : '<p class="text-muted mb-0">No information extracted for this criterion</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        return html;
+    }
+});
+</script>
+{% endblock %}

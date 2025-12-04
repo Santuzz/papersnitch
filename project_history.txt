@@ -84,9 +84,22 @@ gpt5_mini - Input tokens: 8483, Output tokens: 3097, Cumulative tokens: 11580, T
 gemini2.5_flash - Input tokens: 9207, Output tokens: 933, Cumulative tokens: 13783, Time: 21.21s
 
 
+01/12/2025
+Aggiunta pagina di profilo utente con storico analisi
+Aggiornato API GPT con responses al posto di chat completions (utilizzando json_schema)
+Aggiunto logout
+
+02/12/2025
+Iniziato ad approcciare i tool di gpt per ottenere la documentazione del codice
+Aggunto feedback/bug report sul sito 
+Aggiornato stile sito
+
+03/12/2025
+Aggiunta documentazione codice alla valutazione di gpt5.1
+Completata implementazione del tool per ottenere il codice
+Aggiunta funzionalità di controllo limite token giornaliero
+
 TODO:
-    - Estrazione dati dal pdf
-    - Elaborazioni dati estratti con chatgpt
     - Mergare output di diversi LLM
     - Controllare cosa è fattibile valutare senza LLM e con LLM
     - Parallelizzare la lettura dei pdf
@@ -95,6 +108,19 @@ TODO:
     - Valutare i modelli lanciando le chiamate su 5 paper
     - Dall'output degli LLM prendere il codice e confrontarlo con quello che c'è nel db, se presente
     - Ottenere ciò che interessa dal codice (documentazione, markdown, etc.)
+
+    - Chiedere mail al signup (opzionale)
+    - Permettere all'utente di modificare le proprie info (e API)
+    
+    - Aggiungere combinazione score con pesi (mostrarlo nell'history e aggiungerlo a modello)
+
+    - refinire conteggio token che si resetta ogni giorno
+    - Controllare se il paper caricato sia già stato analizzato (confronto titolo o hash),se lo è mostrare le analisi presenti. Chiedere conferma all'utente per continuare
+    - Tasto per selezionare tutti i modelli da utilizzare
+    - Valutazione non applicabile (lato LLM devono fornire voto negativo)
+    - correggere prompt per migliorare risultati
+    - Eseguire media per ottenere score finale di un modello, e successivamente calcolare score inter model (calcolando la media di tutte le medie dei modelli, posso tenere una sola analisi per modello di un paper ?)
+    
 
 
 DOMANDE:
@@ -162,3 +188,8 @@ A link alone isn’t enough for a solid code evaluation, since the repository ma
 -- Documentation: Can be grouped under code evaluation.
 
 -- Licensing and ethical transparency: Can be grouped under data.
+
+
+Paper caricato -> controllo se esiste già (titolo) -> controllo se c'è già il codice (code_text) -> [si] Mostro analisi -> chiedo nuova analisi -> abilito modelli -> chiedo conferma per sovrascrittura analisi 
+                                                                                                 -> [No] Abilito code_tool x gpt -> Abilito modelli
+

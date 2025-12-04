@@ -48,7 +48,6 @@ class Conference(models.Model):
 
 class Paper(models.Model):
 
-    # TODO add a field related to the state of a paper (not reviewed, reviewed, review and rebuttal, published, etc)
     title = models.CharField(max_length=500, verbose_name="Title")
     doi = models.CharField(
         max_length=255, unique=True, verbose_name="DOI", blank=True, null=True
@@ -74,12 +73,15 @@ class Paper(models.Model):
         blank=True,
         null=True,
     )
-    pdf_file = models.FileField(
+    file = models.FileField(
         upload_to="pdf",
         blank=True,
         null=True,
     )
-
+    text = models.TextField(verbose_name="Full paper text", blank=True, null=True)
+    code_text = models.TextField(
+        verbose_name="Code text retrieved from the repository", blank=True, null=True
+    )
     reviews = models.TextField(verbose_name="All reviews text", blank=True, null=True)
     author_feedback = models.TextField(
         verbose_name="Author feedback", blank=True, null=True
@@ -148,3 +150,325 @@ class PDFPaper(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Criterion(models.Model):
+    """Defines evaluation criteria for paper analysis."""
+
+    name = models.CharField(max_length=100, unique=True, verbose_name="Criterion Name")
+    key = models.CharField(max_length=50, unique=True, verbose_name="Criterion Key")
+    description = models.TextField(verbose_name="Description", blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Criterion"
+        verbose_name_plural = "Criteria"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Analysis(models.Model):
+    """Stores LLM analysis results for a paper."""
+
+    paper = models.ForeignKey(
+        Paper,
+        on_delete=models.CASCADE,
+        related_name="analyses",
+        verbose_name="Paper",
+    )
+    user = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        related_name="analyses",
+        verbose_name="User",
+        blank=True,
+        null=True,
+    )
+    model_name = models.CharField(max_length=100, verbose_name="LLM Model Name")
+    model_key = models.CharField(max_length=50, verbose_name="Model Key")
+
+    # Metadata
+    input_tokens = models.IntegerField(
+        verbose_name="Input Tokens", blank=True, null=True
+    )
+    output_tokens = models.IntegerField(
+        verbose_name="Output Tokens", blank=True, null=True
+    )
+    duration = models.FloatField(
+        verbose_name="Duration (seconds)", blank=True, null=True
+    )
+    raw_response = models.JSONField(
+        verbose_name="Raw LLM Response", blank=True, null=True
+    )
+    error = models.TextField(verbose_name="Error Message", blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+
+    class Meta:
+        verbose_name = "Analysis"
+        verbose_name_plural = "Analyses"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.paper.title} - {self.model_name}"
+
+
+class AnalysisCriterion(models.Model):
+    """Stores the result of a specific criterion for an analysis."""
+
+    analysis = models.ForeignKey(
+        Analysis,
+        on_delete=models.CASCADE,
+        related_name="criteria_results",
+        verbose_name="Analysis",
+    )
+    criterion = models.ForeignKey(
+        Criterion,
+        on_delete=models.PROTECT,
+        related_name="analysis_results",
+        verbose_name="Criterion",
+    )
+    extracted = models.TextField(
+        verbose_name="Extracted Information", blank=True, null=True
+    )
+    score_explanation = models.TextField(
+        verbose_name="Score Explanation", blank=True, null=True
+    )
+    score = models.IntegerField(verbose_name="Score (0-5)", blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Analysis Criterion Result"
+        verbose_name_plural = "Analysis Criterion Results"
+        unique_together = ["analysis", "criterion"]
+
+    def __str__(self):
+        return f"{self.analysis} - {self.criterion.name}"
+
+
+class BugReport(models.Model):
+    """Stores bug reports and feature suggestions submitted by users."""
+
+    REPORT_TYPE_CHOICES = [
+        ("bug", "Bug Report"),
+        ("suggestion", "Suggestion"),
+    ]
+
+    PRIORITY_CHOICES = [
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+        ("critical", "Critical"),
+    ]
+
+    STATUS_CHOICES = [
+        ("new", "New"),
+        ("in_progress", "In Progress"),
+        ("resolved", "Resolved"),
+        ("closed", "Closed"),
+        ("wont_fix", "Won't Fix"),
+    ]
+
+    user = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        related_name="bug_reports",
+        verbose_name="Reporter",
+        blank=True,
+        null=True,
+    )
+    report_type = models.CharField(
+        max_length=20,
+        choices=REPORT_TYPE_CHOICES,
+        default="bug",
+        verbose_name="Report Type",
+    )
+    title = models.CharField(max_length=200, verbose_name="Title")
+    description = models.TextField(verbose_name="Description")
+    steps_to_reproduce = models.TextField(
+        verbose_name="Steps to Reproduce", blank=True, null=True
+    )
+    expected_behavior = models.TextField(
+        verbose_name="Expected Behavior", blank=True, null=True
+    )
+    actual_behavior = models.TextField(
+        verbose_name="Actual Behavior", blank=True, null=True
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default="medium",
+        verbose_name="Priority",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="new",
+        verbose_name="Status",
+    )
+    browser_info = models.CharField(
+        max_length=300, verbose_name="Browser Info", blank=True, null=True
+    )
+    screenshot = models.ImageField(
+        upload_to="bug_screenshots/",
+        verbose_name="Screenshot",
+        blank=True,
+        null=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+
+    class Meta:
+        verbose_name = "Feedback"
+        verbose_name_plural = "Feedback"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"[{self.get_report_type_display()}] {self.title}"
+
+
+class TokenUsage(models.Model):
+    """Tracks daily token usage for each LLM model."""
+
+    date = models.DateField(verbose_name="Date")
+    model_var = models.CharField(max_length=100, verbose_name="Model Variable Name")
+    tokens_used = models.BigIntegerField(default=0, verbose_name="Tokens Used")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+
+    class Meta:
+        verbose_name = "Token Usage"
+        verbose_name_plural = "Token Usage"
+        unique_together = ["date", "model_var"]
+        ordering = ["-date", "model_var"]
+
+    def __str__(self):
+        return f"{self.date} - {self.model_var}: {self.tokens_used}"
+
+
+class LLMModelConfig(models.Model):
+    """Stores LLM model configurations for paper analysis."""
+
+    REASONING_EFFORT_CHOICES = [
+        ("none", "None"),
+        ("low", "Low"),
+        ("medium", "Medium"),
+        ("high", "High"),
+    ]
+
+    API_KEY_CHOICES = [
+        ("OPENAI_API_KEY", "OpenAI API Key"),
+        ("GEMINI_API_KEY", "Gemini API Key"),
+        ("BYTEPLUS_API_KEY", "BytePlus API Key"),
+        ("ANTHROPIC_API_KEY", "Anthropic API Key"),
+    ]
+
+    # Basic identification
+    model_key = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="Model Key",
+        help_text="Unique identifier for this model configuration (e.g., 'gpt51', 'gemini25_flash')",
+    )
+    visual_name = models.CharField(
+        max_length=100,
+        verbose_name="Display Name",
+        help_text="Human-readable name shown in the UI",
+    )
+    model = models.CharField(
+        max_length=100,
+        verbose_name="Model Name",
+        help_text="Actual model name used in API calls (e.g., 'gpt-5.1', 'gemini-2.5-flash')",
+    )
+
+    # API configuration
+    api_key_env_var = models.CharField(
+        max_length=50,
+        choices=API_KEY_CHOICES,
+        verbose_name="API Key Environment Variable",
+        help_text="Environment variable name containing the API key",
+    )
+    base_url = models.URLField(
+        max_length=300, verbose_name="Base URL", help_text="API base URL for this model"
+    )
+
+    # Token tracking
+    token_var = models.CharField(
+        max_length=100,
+        verbose_name="Token Variable",
+        help_text="Variable name for tracking token usage (e.g., 'TOTAL_TOKEN_OPENAI')",
+    )
+
+    # Model-specific settings
+    temperature = models.FloatField(
+        default=1.0,
+        verbose_name="Temperature",
+        help_text="Sampling temperature for the model",
+    )
+
+    reasoning_effort = models.CharField(
+        max_length=20,
+        choices=REASONING_EFFORT_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="Reasoning Effort",
+        help_text="Reasoning effort level (for OpenAI models)",
+    )
+
+    # Status
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active",
+        help_text="Whether this model is available for use",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+
+    class Meta:
+        verbose_name = "LLM Model Configuration"
+        verbose_name_plural = "LLM Model Configurations"
+        ordering = ["visual_name"]
+
+    def __str__(self):
+        return f"{self.visual_name} ({self.model_key})"
+
+    def get_api_key(self):
+        """Get the actual API key from environment variable."""
+        import os
+
+        return os.getenv(self.api_key_env_var)
+
+    def to_config_dict(self):
+        """Convert model instance to configuration dictionary for LLM analysis."""
+        import os
+
+        config = {
+            "model": self.model,
+            "token_var": self.token_var,
+            "model_key": self.model_key,
+            "api_key": os.getenv(self.api_key_env_var),
+            "base_url": self.base_url,
+            "visual_name": self.visual_name,
+            "temperature": self.temperature,
+        }
+
+        # Add reasoning effort if set
+        if self.reasoning_effort:
+            config["reasoning"] = {"effort": self.reasoning_effort}
+
+        return config
+
+    @classmethod
+    def get_all_configs(cls):
+        """Get all active model configurations as a dictionary."""
+        configs = {}
+        for model_config in cls.objects.filter(is_active=True):
+            configs[model_config.model_key] = model_config.to_config_dict()
+        return configs
+
+    @classmethod
+    def get_available_models(cls):
+        """Get dictionary of available models for selection."""
+        return {
+            config.model_key: config.visual_name
+            for config in cls.objects.filter(is_active=True)
+        }
