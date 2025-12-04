@@ -99,6 +99,10 @@ Aggiunta documentazione codice alla valutazione di gpt5.1
 Completata implementazione del tool per ottenere il codice
 Aggiunta funzionalità di controllo limite token giornaliero
 
+04/12/2025
+Aggiunto tasto per selezionare tutti i modelli nella pagina di analisi
+Codice non viene utilizzato nel modello, 
+
 TODO:
     - Mergare output di diversi LLM
     - Controllare cosa è fattibile valutare senza LLM e con LLM
@@ -121,6 +125,7 @@ TODO:
     - correggere prompt per migliorare risultati
     - Eseguire media per ottenere score finale di un modello, e successivamente calcolare score inter model (calcolando la media di tutte le medie dei modelli, posso tenere una sola analisi per modello di un paper ?)
     
+    - Controllare pipline di ingestione codice e verificare che funziona in tutti i casi
 
 
 DOMANDE:
