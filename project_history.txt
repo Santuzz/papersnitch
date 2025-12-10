@@ -103,29 +103,42 @@ Aggiunta funzionalità di controllo limite token giornaliero
 Aggiunto tasto per selezionare tutti i modelli nella pagina di analisi
 Codice non viene utilizzato nel modello, 
 
-TODO:
-    - Mergare output di diversi LLM
-    - Controllare cosa è fattibile valutare senza LLM e con LLM
-    - Parallelizzare la lettura dei pdf
-    - Creare la pipeline che prenda i paper dal db, con anche le review, l'author feedback e le metareview. Combinare il tutto per poi passarlo agli LLM.
-    - GPT sembra il migliore nel rispondere, valutare la risposta per vedere se è così. Valutare anche che differenza c'è con la versione mini.
-    - Valutare i modelli lanciando le chiamate su 5 paper
-    - Dall'output degli LLM prendere il codice e confrontarlo con quello che c'è nel db, se presente
-    - Ottenere ciò che interessa dal codice (documentazione, markdown, etc.)
+05/12/2025
+Sistemato prompt per ottenere valutazione più accurata.
 
+09/12/2025
+Rimossi modelli cinesi
+Rimosso tool di gpt per il codice (non veniva chiamato, probabilmente per il prompt)
+abilitata variabile PYTHONUNBUFFERED per vedere le print sul terminale
+
+10/12/2025
+Aggiunto controllo paper già analizzati mostrando la history (query con la prima linea del testo, parte del titolo)
+Sistemato retrieve del codice: Aggiunta regex per trovare codice nel testo del paper. Se il codice è di github
+minor graphic update
+
+TODO:
+Short term:
+    - 
+    - Aggiungere combinazione score con pesi (mostrarlo nell'history e aggiungerlo a modello)
+    - refinire conteggio token che si resetta ogni giorno
+    - Aggiungere alert per token in esaurimento
+    - Valutazione non applicabile (lato LLM devono fornire voto negativo)
+
+
+Long term:
+    - Gestione permessi utente
+    - Mergare output di diversi LLM
     - Chiedere mail al signup (opzionale)
     - Permettere all'utente di modificare le proprie info (e API)
     
-    - Aggiungere combinazione score con pesi (mostrarlo nell'history e aggiungerlo a modello)
-
-    - refinire conteggio token che si resetta ogni giorno
-    - Controllare se il paper caricato sia già stato analizzato (confronto titolo o hash),se lo è mostrare le analisi presenti. Chiedere conferma all'utente per continuare
-    - Tasto per selezionare tutti i modelli da utilizzare
-    - Valutazione non applicabile (lato LLM devono fornire voto negativo)
-    - correggere prompt per migliorare risultati
-    - Eseguire media per ottenere score finale di un modello, e successivamente calcolare score inter model (calcolando la media di tutte le medie dei modelli, posso tenere una sola analisi per modello di un paper ?)
+    - Controllare cosa è fattibile valutare senza LLM e con LLM
+    - Parallelizzare la lettura dei pdf
+    - GPT sembra il migliore nel rispondere, valutare la risposta per vedere se è così. Valutare anche che differenza c'è con la versione mini.
+    - Valutare i modelli lanciando le chiamate su 5 paper
+    - Dall'output degli LLM prendere il codice e confrontarlo con quello che c'è nel db, se presente
     
-    - Controllare pipline di ingestione codice e verificare che funziona in tutti i casi
+    - creare gruppi di utenti con diversi limiti di token (check_token_limit in functions.py)
+    
 
 
 DOMANDE:

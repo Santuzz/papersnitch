@@ -39,6 +39,11 @@
                     <i class="fas fa-comments"></i> Feedback
                 </button>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'analyze' %}" style="color: white;" title="Analyze Papers">
+                    <i class="fas fa-file-pdf fa-lg"></i>
+                </a>
+            </li>
         {% if user.is_authenticated %}
             
             <li class="nav-item">
@@ -46,11 +51,7 @@
                     <i class="fas fa-user fa-lg"></i>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'analyze' %}" style="color: white;" title="Analyze Papers">
-                    <i class="fas fa-file-pdf fa-lg"></i>
-                </a>
-            </li>
+            
             <li class="nav-item">
                 <form method="post" action="{% url 'logout' %}" style="display: inline;"title="Logout">
                     {% csrf_token %}
@@ -60,9 +61,6 @@
                 </form>
             </li>
         {% else %}
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'analyze' %}"> <i class="fas fa-file-pdf fa-lg"></i> Analyze</a>
-            </li>
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'login' %}">Login</a>
             </li>

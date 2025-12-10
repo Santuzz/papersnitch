@@ -175,7 +175,7 @@ class LLMModelConfigAdmin(admin.ModelAdmin):
         (
             "Model Settings",
             {
-                "fields": ("temperature", "thinking_enabled", "reasoning_effort"),
+                "fields": ("temperature", "reasoning_effort"),
             },
         ),
         (

@@ -1,6 +1,6 @@
 Diciamo a Django di segnare la migrazione come "non applicata" senza però tentare di cancellare le tabelle (che sono già in uno stato errato).
 
-docker compose exec django-web python manage.py migrate webApp zero --fake
+docker compose exec django-web uv run manage.py migrate webApp zero --fake
 
 2. Cancella le Tabelle "corrotte"
 
@@ -24,4 +24,4 @@ exit;
 
 3. Riapplica le Migrazioni (per davvero)
 
-docker compose exec django-web python manage.py migrate webApp
+docker compose exec django-web uv run manage.py migrate webApp

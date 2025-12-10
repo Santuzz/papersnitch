@@ -32,7 +32,7 @@
                 <div class="card-body">
                     <!-- Upload Form -->
                     <div id="upload-section">
-                        <form id="upload-form" enctype="multipart/form-data" autocomplete="off">
+                        <form id="check-past-form" enctype="multipart/form-data" autocomplete="off">
                             {% csrf_token %}
                             <div class="form-group">
                                 <label for="pdf-file" class="font-weight-bold">Upload PDF Paper</label>
@@ -43,28 +43,66 @@
                                 <small class="form-text text-muted">Upload a scientific paper in PDF format for analysis.</small>
                             </div>
                             
-                            <div class="form-group">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <label class="font-weight-bold mb-0">Select Models for Analysis</label>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="select-all-models-btn">
-                                        <i class="fas fa-lg fa-check mr-1"></i>Select All
-                                    </button>
-                                </div>
-                                <div class="model-checkboxes">
-                                    {% for model_key, visual_name in available_models.items %}
-                                    <div class="custom-control custom-checkbox custom-control-inline">
-                                        <input type="checkbox" class="custom-control-input model-checkbox" id="model-{{ model_key }}" name="models" value="{{ model_key }}">
-                                        <label class="custom-control-label" for="model-{{ model_key }}">{{ visual_name }}</label>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                <small class="form-text text-muted">Select at least one model to analyze the paper.</small>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary btn-lg btn-block" id="analyze-btn" disabled>
-                                <i class="fas fa-search mr-2"></i>Analyze
+                            <button type="submit" class="btn btn-primary btn-lg btn-block" id="check-past-btn" disabled>
+                                <i class="fas fa-history mr-2"></i>Check for Past Analyses
                             </button>
                         </form>
+                        
+                        <!-- Past Analyses Section Success(Hidden initially) -->
+                        <div id="past-analyses-section" style="display: none;">
+                            <hr>
+                            <h5 class="mb-3"><i class="fas fa-database mr-2"></i>Search Result</h5>
+                            <div class="alert alert-info">
+                                <strong>Paper Title:</strong> <span id="paper-title"></span>
+                            </div>
+                            <div id="past-analyses-list" class="mb-4">
+                                <!-- Past analyses will be listed here -->
+                            </div>
+                        </div>
+
+                         <!-- Past Analyses Section Failure (Hidden initially) -->
+                        <div id="past-analyses-section-fail" style="display: none;">
+                            <hr>
+                            <h5 class="mb-3"><i class="fas fa-database mr-2"></i>Search Result</h5>
+                            <div class="alert alert-danger">
+                                <strong>No paper found with title: </strong> <span id="paper-title-fail"></span>
+                                <br/>
+                                <strong>Proceed to analyze this paper</strong>
+                            </div>
+                        </div>
+                        
+                        <!-- Model Selection Form (Hidden initially) -->
+                        <div id="model-selection-section" style="display: none;">
+                            <hr>
+                            <form id="analyze-form" enctype="multipart/form-data" autocomplete="off">
+                                {% csrf_token %}
+                                <input type="hidden" id="uploaded-pdf-file" name="pdf_file">
+                                
+                                <div class="form-group">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="font-weight-bold mb-0">Select Models for Analysis</label>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="select-all-models-btn">
+                                            <i class="fas fa-lg fa-check mr-1"></i>Select All
+                                        </button>
+                                    </div>
+                                    <div class="model-checkboxes">
+                                        {% for model_key, visual_name in available_models.items %}
+                                        <div class="custom-control custom-checkbox custom-control-inline">
+                                            <input type="checkbox" class="custom-control-input model-checkbox" id="model-{{ model_key }}" name="models" value="{{ model_key }}">
+                                            <label class="custom-control-label" for="model-{{ model_key }}">{{ visual_name }}</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <small class="form-text text-muted">Select at least one model to analyze the paper.</small>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-lg btn-block" id="analyze-btn" disabled>
+                                    <i class="fas fa-search mr-2"></i>Analyze
+                                </button>
+                            </form>
+                        </div>
+
+                        
                     </div>
 
                     <!-- Progress Section (Hidden initially) -->
@@ -106,6 +144,29 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analysis Detail Modal -->
+<div class="modal fade" id="analysisModal" tabindex="-1" role="dialog" aria-labelledby="analysisModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="analysisModalLabel">Analysis Details</h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="analysis-modal-content">
+                <div class="text-center py-5">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Loading analysis...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -270,6 +331,26 @@
     .criterion-card .card-body {
         border-top: 1px solid #E8E8E8;
     }
+    
+    .dataset-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #1ABC9C 0%, #0E8C82 100%);
+        color: white;
+        padding: 4px 10px;
+        margin: 2px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+    }
+    
+    .extracted-text {
+        max-height: 150px;
+        overflow-y: auto;
+        background-color: #F7F7F7;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        border: 1px solid #E8E8E8;
+    }
 </style>
 
 <script>
@@ -331,23 +412,296 @@ document.addEventListener('DOMContentLoaded', function() {
     // Clear file input on page load to prevent browser restore
     const pdfFileInput = document.getElementById('pdf-file');
     const modelCheckboxes = document.querySelectorAll('.model-checkbox');
+    const checkPastBtn = document.getElementById('check-past-btn');
+    const checkPastForm = document.getElementById('check-past-form');
+    const analyzeForm = document.getElementById('analyze-form');
+    const pastAnalysesSection = document.getElementById('past-analyses-section');
+    const pastAnalysesSectionFail = document.getElementById('past-analyses-section-fail');
+    const modelSelectionSection = document.getElementById('model-selection-section');
+    const pastAnalysesList = document.getElementById('past-analyses-list');
+    const paperTitleSpan = document.getElementById('paper-title');
+    const paperTitleSpanFail = document.getElementById('paper-title-fail');
+    
     pdfFileInput.value = '';
     document.querySelector('.custom-file-label').textContent = 'Choose PDF file...';
+    checkPastBtn.disabled = true;
     analyzeBtn.disabled = true;
+    
+    let uploadedPdfFile = null;
+    
+    // Function to check if check-past button should be enabled
+    function updateCheckPastButton() {
+        const hasFile = pdfFileInput.files && pdfFileInput.files[0];
+        checkPastBtn.style.display = 'block';
+        checkPastBtn.disabled = !hasFile;
+    }
     
     // Function to check if analyze button should be enabled
     function updateAnalyzeButton() {
-        const hasFile = pdfFileInput.files && pdfFileInput.files[0];
         const hasModel = document.querySelectorAll('.model-checkbox:checked').length > 0;
-        analyzeBtn.disabled = !(hasFile && hasModel);
+        analyzeBtn.disabled = !hasModel;
     }
     
     // File input label update
     pdfFileInput.addEventListener('change', function(e) {
         const fileName = e.target.files[0] ? e.target.files[0].name : 'Choose PDF file...';
         document.querySelector('.custom-file-label').textContent = fileName;
-        updateAnalyzeButton();
+        uploadedPdfFile = e.target.files[0];
+        updateCheckPastButton();
+        // Hide past analyses and model selection when new file is selected
+        pastAnalysesSection.style.display = 'none';
+        pastAnalysesSectionFail.style.display = 'none';
+        modelSelectionSection.style.display = 'none';
+        //TODO: Reset check past button state
+        checkPastBtn.innerHTML = '<i class="fas fa-history mr-2"></i>Check for Past Analyses';
     });
+    
+    // Check past analyses form submission
+    checkPastForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(checkPastForm);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        checkPastBtn.disabled = true;
+        checkPastBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Checking...';
+        
+        try {
+            const response = await fetch('{% url "check_past_analyses" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            if (!response.ok) {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    const errorData = await response.json();
+                    alert('Error: ' + (errorData.error || 'Failed to check past analyses'));
+                } else {
+                    alert('Error: Failed to check past analyses');
+                }
+                checkPastBtn.disabled = false;
+                checkPastBtn.style.display = 'block';
+                checkPastBtn.innerHTML = '<i class="fas fa-history mr-2"></i>Check for Past Analyses';
+                return;
+            }
+
+            const data = await response.json();
+            
+            // Show model selection section
+            modelSelectionSection.style.display = 'block';
+            
+            if (data.has_past_analyses) {
+                // Show past analyses
+                paperTitleSpan.textContent = data.title;
+                pastAnalysesSection.style.display = 'block';
+                pastAnalysesSectionFail.style.display = 'none';
+                renderPastAnalyses(data.past_analyses);
+            } else {
+                // No past analyses, just show model selection
+                pastAnalysesSection.style.display = 'none';
+                paperTitleSpanFail.textContent = data.title;
+                pastAnalysesSectionFail.style.display = 'block';
+            }
+            
+            checkPastBtn.disabled = true;
+            checkPastBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Checked';
+            checkPastBtn.style.display = 'none';
+        } catch (error) {
+            alert('Network error: ' + error.message);
+            checkPastBtn.disabled = false;
+            checkPastBtn.innerHTML = '<i class="fas fa-history mr-2"></i>Check for Past Analyses';
+        }
+    });
+    
+    // Render past analyses
+    function renderPastAnalyses(analyses) {
+        pastAnalysesList.innerHTML = '';
+        
+        const table = document.createElement('table');
+        table.className = 'table table-striped table-hover';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Duration</th>
+                    <th>Tokens</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        `;
+        
+        const tbody = table.querySelector('tbody');
+        analyses.forEach(function(analysis) {
+            const row = document.createElement('tr');
+            const statusBadge = analysis.has_error 
+                ? '<span class="badge badge-danger">Error</span>' 
+                : '<span class="badge badge-success">Success</span>';
+            const duration = analysis.duration ? `${analysis.duration.toFixed(2)}s` : 'N/A';
+            const tokens = (analysis.input_tokens && analysis.output_tokens) 
+                ? `${analysis.input_tokens + analysis.output_tokens}` 
+                : 'N/A';
+            
+            row.innerHTML = `
+                <td>${analysis.model_name}</td>
+                <td>${analysis.created_at}</td>
+                <td>${analysis.user}</td>
+                <td>${duration}</td>
+                <td>${tokens}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary view-analysis-btn" 
+                            data-analysis-id="${analysis.id}"
+                            data-toggle="modal" 
+                            data-target="#analysisModal">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        pastAnalysesList.appendChild(table);
+        
+        // Attach event listeners to view buttons
+        document.querySelectorAll('.view-analysis-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const analysisId = this.dataset.analysisId;
+                loadAnalysisDetails(analysisId);
+            });
+        });
+    }
+    
+    // Load analysis details function
+    function loadAnalysisDetails(analysisId) {
+        const modalContent = document.getElementById('analysis-modal-content');
+        modalContent.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p class="mt-2">Loading analysis...</p>
+            </div>
+        `;
+        
+        fetch(`/profile/analysis/${analysisId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    modalContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                modalContent.innerHTML = renderAnalysisDetails(data);
+            })
+            .catch(error => {
+                modalContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Failed to load analysis details.
+                    </div>
+                `;
+            });
+    }
+    
+    function renderAnalysisDetails(data) {
+        let html = `
+            <div class="mb-3">
+                <h6 class="text-primary"><i class="fas fa-file-alt mr-2"></i>${data.paper_title}</h6>
+                <div class="text-muted small">
+                    <span class="badge badge-info mr-2">${data.model_name}</span>
+                    <i class="fas fa-calendar mr-1"></i>${data.created_at} |
+                    <i class="fas fa-clock mr-1"></i>${data.duration}s |
+                    <i class="fas fa-arrow-down mr-1"></i>${data.input_tokens} tokens |
+                    <i class="fas fa-arrow-up mr-1"></i>${data.output_tokens} tokens
+                </div>
+            </div>
+        `;
+        
+        if (data.error) {
+            html += `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${data.error}
+                </div>
+            `;
+            return html;
+        }
+        
+        const result = data.raw_response;
+        if (!result) {
+            html += `<div class="alert alert-warning">No analysis data available.</div>`;
+            return html;
+        }
+        
+        // Datasets section
+        html += `
+            <div class="card criterion-card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-database mr-2"></i>Datasets</h6>
+                </div>
+                <div class="card-body">
+                    ${result.datasets && result.datasets.extracted && result.datasets.extracted.length > 0
+                        ? result.datasets.extracted.map(d => `<span class="dataset-badge">${d}</span>`).join('')
+                        : '<p class="text-muted mb-0">No datasets identified</p>'}
+                </div>
+            </div>
+        `;
+        
+        // Scored sections
+        const scoredSections = [
+             { key: 'code', icon: 'fa-code', title: 'Code Repository' },
+            { key: 'annotation', icon: 'fa-tags', title: 'Annotation' },
+            { key: 'preprocessing', icon: 'fa-cogs', title: 'Preprocessing' },
+            { key: 'evaluation', icon: 'fa-chart-bar', title: 'Evaluation' },
+            { key: 'licensing', icon: 'fa-balance-scale', title: 'Licensing' }
+        ];
+        
+        for (const section of scoredSections) {
+            const sectionData = result[section.key];
+            const score = sectionData && typeof sectionData.score === 'number' ? sectionData.score : 0;
+            
+            html += `
+                <div class="card criterion-card mb-3">
+                    <div class="card-header bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas ${section.icon} mr-2"></i>${section.title}
+                            ${section.key === 'code' 
+                                ? `<a href="${sectionData.url}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                       <i class="fas fa-external-link-alt mr-1"></i>View Repository
+                                   </a>` 
+                                : ''}</h6>
+                            ${score === -1 
+                                ? `<span class="score-badge score-${score}">n/a</span>` 
+                                : `<span class="score-badge score-${score}">${score}</span>`}
+                            
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        ${sectionData && sectionData.extracted 
+                            ? `
+                                <h6 class="text-muted small">Extracted Information:</h6>
+                                <div class="extracted-text">${sectionData.extracted}</div>
+                                ${sectionData.score_explanation 
+                                    ? `<h6 class="text-muted small mt-3">Score Explanation:</h6><p class="mb-0 small">${sectionData.score_explanation}</p>`
+                                    : ''}
+                              `
+                            : '<p class="text-muted mb-0">No information extracted for this criterion</p>'}
+                    </div>
+                </div>
+            `;
+        }
+        
+        return html;
+    }
     
     // Model checkbox change handler
     modelCheckboxes.forEach(function(checkbox) {
@@ -385,10 +739,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Upload form submission
-    uploadForm.addEventListener('submit', async function(e) {
+    analyzeForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const formData = new FormData(uploadForm);
+        // Create a new FormData with the uploaded PDF file
+        const formData = new FormData();
+        formData.append('pdf_file', uploadedPdfFile);
+        
+        // Add selected models
+        const selectedModels = document.querySelectorAll('.model-checkbox:checked');
+        selectedModels.forEach(function(checkbox) {
+            formData.append('models', checkbox.value);
+        });
+        
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
         
         analyzeBtn.disabled = true;
@@ -480,18 +843,30 @@ document.addEventListener('DOMContentLoaded', function() {
         progressSection.style.display = 'none';
         resultsSection.style.display = 'none';
         errorSection.style.display = 'none';
-        uploadForm.reset();
+        pastAnalysesSection.style.display = 'none';
+        modelSelectionSection.style.display = 'none';
+
+        
+        checkPastForm.reset();
+        analyzeForm.reset();
         document.querySelector('.custom-file-label').textContent = 'Choose PDF file...';
+        
         // Uncheck all model checkboxes
         modelCheckboxes.forEach(function(checkbox) {
             checkbox.checked = false;
         });
+        
+        checkPastBtn.disabled = true;
+        checkPastBtn.style.display = 'block';
+        checkPastBtn.innerHTML = '<i class="fas fa-history mr-2"></i>Check for Past Analyses';
         analyzeBtn.disabled = true;
         analyzeBtn.innerHTML = '<i class="fas fa-search mr-2"></i>Analyze';
+        
         // Reset terminal
         terminalLog.innerHTML = '';
         lastStep = '';
         currentTaskId = null;
+        uploadedPdfFile = null;
     }
     
     function updateProgress(progress, status) {
@@ -524,14 +899,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.status === 'completed') {
                     clearInterval(pollInterval);
                     showResults(data.results);
-                } else if (data.status === 'error') {
+                } 
+                else if (data.status === 'error') {
                     clearInterval(pollInterval);
                     showError(data.error || 'Analysis failed');
                 }
             } catch (error) {
                 clearInterval(pollInterval);
                 showError('Connection error: ' + error.message);
-            }
+            } 
         }, 1000);
     }
     
@@ -596,45 +972,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        // Code section (with score like other criteria)
-        const codeData = result.code || {};
-        const codeScore = codeData.score !== undefined ? codeData.score : null;
-        html += `
-            <div class="card criterion-card">
-                <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#code-${uniqueId}" aria-expanded="true">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="fas fa-code mr-2"></i>Code Repository</h6>
-                        <div class="d-flex align-items-center">
-                            ${codeScore !== null ? `<span class="badge score-badge score-${codeScore} mr-2">${codeScore}</span>` : ''}
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                        </div>
-                    </div>
-                </div>
-                <div id="code-${uniqueId}" class="collapse show">
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <strong>Repository URL:</strong><br>
-                            ${codeData.url && codeData.url.startsWith('http')
-                                ? `<a href="${codeData.url}" target="_blank" class="btn btn-outline-primary btn-sm mt-1"><i class="fas fa-external-link-alt mr-1"></i>${codeData.url}</a>`
-                                : '<span class="text-muted">No repository URL found</span>'}
-                        </div>
-                        ${codeData.extracted ? `
-                        <div class="mb-3">
-                            <strong>Extracted Information:</strong>
-                            <div class="extracted-text mt-1">${codeData.extracted}</div>
-                        </div>
-                        ` : ''}
-                        ${codeData.score_explanation ? `
-                        <div>
-                            <strong>Score Explanation:</strong>
-                            <p class="mb-0 mt-1">${codeData.score_explanation}</p>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        
         // Datasets section
         html += `
             <div class="card criterion-card">
@@ -656,10 +993,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Scored sections
         const scoredSections = [
+            { key: 'code', icon: 'fa-code', title: 'Code Repository' },
             { key: 'annotation', icon: 'fa-tags', title: 'Annotation' },
             { key: 'preprocessing', icon: 'fa-cogs', title: 'Preprocessing' },
             { key: 'evaluation', icon: 'fa-chart-bar', title: 'Evaluation' },
-            { key: 'licensing_and_ethical_transparency', icon: 'fa-balance-scale', title: 'Licensing & Ethics' }
+            { key: 'licensing', icon: 'fa-balance-scale', title: 'Licensing' }
         ];
         
         for (const section of scoredSections) {
@@ -671,9 +1009,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="card criterion-card">
                     <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#${collapseId}" aria-expanded="true">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="fas ${section.icon} mr-2"></i>${section.title}</h6>
+                            <h6 class="mb-0"><i class="fas ${section.icon} mr-2"></i>${section.title}
+                            ${section.key === 'code' 
+                                ? `<a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                       <i class="fas fa-external-link-alt mr-1"></i>View Repository
+                                   </a>` 
+                                : ''}</h6>
                             <div class="d-flex align-items-center">
-                                <span class="score-badge score-${score} mr-2">${score}</span>
+                                ${score === -1 
+                                    ? `<span class="score-badge score-${score} mr-2">n/a</span>` 
+                                    : `<span class="score-badge score-${score} mr-2">${score}</span>`}
                                 <i class="fas fa-chevron-down toggle-icon"></i>
                             </div>
                         </div>

@@ -11,6 +11,7 @@ services:
 
     environment:
       - UV_CACHE_DIR=/tmp/uv-cache # Cache in /tmp for development
+      - PYTHONUNBUFFERED=1 # Disable Python output buffering for real-time logs
     env_file:
       - .env.local
     depends_on:

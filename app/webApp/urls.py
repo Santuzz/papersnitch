@@ -27,6 +27,7 @@ from .views import (
     ProfileView,
     AnalysisDetailView,
     BugReportView,
+    CheckPastAnalysesView,
 )
 from django.contrib.auth import views as auth_views
 
@@ -54,4 +55,9 @@ urlpatterns = [
         name="analysis_cleanup",
     ),
     path("report-bug/", BugReportView.as_view(), name="bug_report"),
+    path(
+        "analyze/check-past/",
+        CheckPastAnalysesView.as_view(),
+        name="check_past_analyses",
+    ),
 ]
