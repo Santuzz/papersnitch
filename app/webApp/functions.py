@@ -53,16 +53,14 @@ class TokenLimitExceededError(Exception):
 
 def check_token_limit(token_var: str) -> bool:
     """Check if the token usage is within the allowed limit.
-
     Args:
         token_var: The token variable name to check.
-
     Returns:
         True if within limit, raises TokenLimitExceededError if exceeded.
-
     Raises:
         TokenLimitExceededError: If the token limit has been exceeded.
     """
+
     if token_var not in TOKEN_LIMITS:
         return True  # No limit for this token variable
 
@@ -80,7 +78,7 @@ def check_token_limit(token_var: str) -> bool:
             raise TokenLimitExceededError(
                 f"Maximum amount of free tokens exhausted for {token_var}. "
                 f"Used: {current_usage:,} / Limit: {limit:,}. "
-                "Contact the admin to get access to paid tokens."
+                "Contact the admin to get access to more tokens."
             )
     except TokenUsage.DoesNotExist:
         pass  # No usage yet, within limit

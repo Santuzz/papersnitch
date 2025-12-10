@@ -6,9 +6,9 @@ from django.contrib.auth import login
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views import View
-from webApp.models import Operations, Analysis, BugReport
+from webApp.models import Operations, Analysis, BugReport, Paper
 from django.shortcuts import render, redirect
-from .functions import upload_pdf
+from .functions import upload_pdf, get_text
 
 from webApp.services.llm_analysis import (
     create_analysis_task,
@@ -68,6 +68,7 @@ class AnalyzePaperView(View):
         )
 
     def post(self, request):
+        action = request.POST.get("action")
         """Handle PDF upload and start analysis. Requires login."""
         if not request.user.is_authenticated:
             return JsonResponse(
@@ -249,3 +250,76 @@ class BugReportView(View):
         }
         messages.success(request, type_messages.get(report_type, type_messages["bug"]))
         return redirect("bug_report")
+
+
+class CheckPastAnalysesView(LoginRequiredMixin, View):
+    """View for checking past analyses for a PDF paper."""
+
+    login_url = "/accounts/login/"
+
+    def post(self, request):
+        """Handle PDF upload and check for past analyses."""
+        if "pdf_file" not in request.FILES:
+            return JsonResponse({"error": "No PDF file provided"}, status=400)
+
+        pdf_file = request.FILES["pdf_file"]
+
+        # Validate file type
+        if not pdf_file.name.endswith(".pdf"):
+            return JsonResponse({"error": "File must be a PDF"}, status=400)
+
+        # Read first bytes to check if it's a valid PDF
+        first_bytes = pdf_file.read(4)
+        pdf_file.seek(0)  # Reset file pointer
+
+        if not first_bytes.startswith(b"%PDF"):
+            return JsonResponse(
+                {"error": "Downloaded file is not a valid PDF"}, status=400
+            )
+
+        # Extract text and get title
+        try:
+            text = get_text(pdf_file)
+
+            title = text.split("\n")[0]
+        except Exception as e:
+            return JsonResponse(
+                {"error": f"Failed to extract text from PDF: {str(e)}"}, status=400
+            )
+
+        # Find existing paper by title
+        paper = Paper.objects.filter(title=title).first()
+
+        past_analyses = []
+        if paper:
+            # Get all analyses for this paper (not just user's)
+            analyses = (
+                Analysis.objects.filter(paper=paper)
+                .select_related("user")
+                .order_by("-created_at")
+            )
+
+            for analysis in analyses:
+                past_analyses.append(
+                    {
+                        "id": analysis.id,
+                        "model_name": analysis.model_name,
+                        "model_key": analysis.model_key,
+                        "created_at": analysis.created_at.strftime("%b %d, %Y %H:%M"),
+                        "duration": analysis.duration,
+                        "input_tokens": analysis.input_tokens,
+                        "output_tokens": analysis.output_tokens,
+                        "user": (
+                            analysis.user.username if analysis.user else "Anonymous"
+                        ),
+                        "has_error": bool(analysis.error),
+                    }
+                )
+        print(title)
+        return JsonResponse(
+            {
+                "title": title,
+                "has_past_analyses": len(past_analyses) > 0,
+                "past_analyses": past_analyses,
+            }
+        )

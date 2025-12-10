@@ -52,7 +52,7 @@ class Paper(models.Model):
     doi = models.CharField(
         max_length=255, unique=True, verbose_name="DOI", blank=True, null=True
     )
-    abstract = models.TextField(verbose_name="Abstract")
+    abstract = models.TextField(verbose_name="Abstract", blank=True, null=True)
     supp_materials = models.FileField(
         upload_to="supp_materials",
         verbose_name="Supplementary materials",
@@ -350,6 +350,7 @@ class LLMModelConfig(models.Model):
 
     REASONING_EFFORT_CHOICES = [
         ("none", "None"),
+        ("minimal", "Minimal"),
         ("low", "Low"),
         ("medium", "Medium"),
         ("high", "High"),

@@ -8,6 +8,8 @@ using various LLM models based on specific criteria.
 import json
 import logging
 import os
+from pydoc import text
+import re
 import time
 import uuid
 import threading
@@ -16,7 +18,7 @@ from typing import Dict, Any, Optional
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
-from dotenv import load_dotenv, set_key, get_key
+from dotenv import load_dotenv
 
 load_dotenv(".env.local")
 
@@ -35,6 +37,37 @@ from webApp.functions import (
     check_token_limit,
     TokenLimitExceededError,
 )
+from pydantic import BaseModel, Field
+from typing import List
+
+
+class Code(BaseModel):
+    url: str
+    extracted: str
+    score_explanation: str
+    score: int
+
+
+class Datasets(BaseModel):
+    extracted: List[str]
+
+
+class GeneralCriteria(BaseModel):
+    extracted: str
+    score_explanation: str
+    score: int
+
+
+class PaperAnalysis(BaseModel):
+    code: Code
+    datasets: Datasets
+    annotation: GeneralCriteria
+    preprocessing: GeneralCriteria
+    evaluation: GeneralCriteria
+    licensing: GeneralCriteria
+
+    class Config:
+        extra = "forbid"
 
 
 def get_model_configs() -> Dict[str, Any]:
@@ -42,16 +75,22 @@ def get_model_configs() -> Dict[str, Any]:
     return LLMModelConfig.get_all_configs()
 
 
-# take all the entry in Criterion model django
+def get_criterions() -> str:
+    """Get criteria from the database and format as a string for the prompt.
 
-CRITERIONS = "{"
-crit = Criterion.objects.all().values("key", "description").order_by("id")
-for c in crit:
-    CRITERIONS = (
-        CRITERIONS
-        + f'\n  "{c["key"]}": {{\n    "definition": "{c["description"]}"\n  }},'
-    )
-CRITERIONS = CRITERIONS[:-1] + "\n}"  # remove last comma and close bracket
+    This is called at runtime rather than module import time to avoid
+    database access during Django's initialization phase (e.g., makemigrations).
+    """
+    criterions = "CRITERIONS:\n{"
+    crit = Criterion.objects.all().values("key", "description").order_by("id")
+    for c in crit:
+        criterions = (
+            criterions
+            + f'\n  "{c["key"]}": {{\n    "definition": "{c["description"]}"\n  }},'
+        )
+    criterions = criterions[:-1] + "\n}"  # remove last comma and close bracket
+    return criterions
+
 
 # JSON Schema for structured model outputs
 JSON_SCHEMA = {
@@ -80,7 +119,7 @@ JSON_SCHEMA = {
                         },
                         "score": {
                             "type": "integer",
-                            "description": "Score from 0 to 5 indicating how well the paper addresses code availability and documentation",
+                            "description": "Score indicating how well the paper addresses code availability and documentation",
                         },
                     },
                     "required": ["url", "extracted", "score_explanation", "score"],
@@ -113,7 +152,7 @@ JSON_SCHEMA = {
                         },
                         "score": {
                             "type": "integer",
-                            "description": "Score from 0 to 5 indicating how well the paper addresses annotation",
+                            "description": "Score indicating how well the paper addresses annotation",
                         },
                     },
                     "required": ["extracted", "score_explanation", "score"],
@@ -133,7 +172,7 @@ JSON_SCHEMA = {
                         },
                         "score": {
                             "type": "integer",
-                            "description": "Score from 0 to 5 indicating how well the paper addresses preprocessing",
+                            "description": "Score indicating how well the paper addresses preprocessing",
                         },
                     },
                     "required": ["extracted", "score_explanation", "score"],
@@ -153,13 +192,13 @@ JSON_SCHEMA = {
                         },
                         "score": {
                             "type": "integer",
-                            "description": "Score from 0 to 5 indicating how well the paper addresses evaluation",
+                            "description": "Score indicating how well the paper addresses evaluation",
                         },
                     },
                     "required": ["extracted", "score_explanation", "score"],
                     "additionalProperties": False,
                 },
-                "licensing_and_ethical_transparency": {
+                "licensing": {
                     "type": "object",
                     "description": "Information about licensing and ethical considerations",
                     "properties": {
@@ -173,7 +212,7 @@ JSON_SCHEMA = {
                         },
                         "score": {
                             "type": "integer",
-                            "description": "Score from 0 to 5 indicating how well the paper addresses licensing and ethics",
+                            "description": "Score indicating how well the paper addresses licensing and ethics",
                         },
                     },
                     "required": ["extracted", "score_explanation", "score"],
@@ -186,13 +225,42 @@ JSON_SCHEMA = {
                 "annotation",
                 "preprocessing",
                 "evaluation",
-                "licensing_and_ethical_transparency",
+                "licensing",
             ],
             "additionalProperties": False,
         },
     }
 }
 
+json_object = {
+    "code": {
+        "url": "Code repository URL (e.g., GitHub link). Empty string if not found.",
+        "extracted": "Extracted text related to code availability, documentation, or instructions to access the code",
+        "score_explanation": "Explanation and motivation for the score given regarding code availability and documentation",
+        "score": "INTEGER Score indicating how well the paper addresses code availability and documentation",
+    },
+    "datasets": {"extracted": "List of dataset names extracted from the paper"},
+    "annotation": {
+        "extracted": "Extracted text related to annotation methodology",
+        "score_explanation": "Explanation and motivation for the score given",
+        "score": "INTEGER Score indicating how well the paper addresses annotation",
+    },
+    "preprocessing": {
+        "extracted": "Extracted text related to preprocessing methodology",
+        "score_explanation": "Explanation and motivation for the score given",
+        "score": "INTEGER Score indicating how well the paper addresses preprocessing",
+    },
+    "evaluation": {
+        "extracted": "Extracted text related to evaluation methodology",
+        "score_explanation": "Explanation and motivation for the score given",
+        "score": "INTEGER Score indicating how well the paper addresses evaluation",
+    },
+    "licensing": {
+        "extracted": "Extracted text related to licensing and ethical transparency",
+        "score_explanation": "Explanation and motivation for the score given",
+        "score": "INTEGER Score indicating how well the paper addresses licensing and ethics",
+    },
+}
 # Store for active analysis tasks
 _analysis_tasks: Dict[str, Dict[str, Any]] = {}
 _tasks_lock = threading.Lock()
@@ -200,18 +268,17 @@ _tasks_lock = threading.Lock()
 
 def _get_system_prompt() -> str:
     """Generate the system prompt for the LLM."""
-    return f"""You are an intelligent scientific paper information extractor, responsible for analyzing scientific papers provided and extract text from them based on specific criterions. Your reply can be only text in JSON format as specified below.
-    Based on the criterion provided, one or more, you have to find and put in the answer the text related to the CRITERION (`extracted` field).
-    CRITERION - {CRITERIONS}
-    
-    Beside that you have to provide a motivation of the score given in the `score_explanation` field.
-    And at the end you should give a score (based ONLY on the text extracted) from 0 to 5 (integer value) based on how well the paper addresses the criterion related.
-    0 means that the information are not provided at all, or the text can't be associated to the criterion. 5 means that criterion is very well covered and detailed based on the definition of the criterion. All the score from 1 to 4 are in between for texts that partially address the criterion or some important details are missing.
-    You have to put the score in the `score` key instead of INTEGER_VALUE.
-    Please output your reply in the JSON SCHEMA.
-    
-    Note: Your answer MUST contain ONLY the JSON with the text extracted from the paper in the `extracted` field and the `score` field, no other words or markdown symbols. Please place the information extracted from the paper in the `extracted` field, the motivations of the score in the `score_explanation` field and the score value in the `score` field. Not all the criterions have the `score` field, only the ones that need it.
-    If you didn't find any information related to a specific criterion, set the `extracted` field to an empty string. Explain why there are no extracted information in the `score_explanation` field and set the `score` field to 0
+    return f"""You are an evaluator specialized in assessing how reproducible the results in a published scientific paper (mainly in the field of artificial intelligence) are for other people. A scientific paper should be SELF-CONTAINED, meaning it must include everything necessary for another individual to replicate the results obtained by the authors. This requirement is not always met, and that is why your help is needed.
+Reproducibility evaluation is based on:
+- CRITERIONS, a group of aspects that must be evaluated individually
+- PAPER TEXT, the text of the scientific paper, which will be your primary source for extracting information used in the evaluation
+- CODE REPOSITORY, documentation and any code components relevant to specific criteria that depend on it. This text may be absent for various reasons (e.g., the paper does not reference any software and therefore does not need to provide code; the authors choose not to share the code they used—an improper practice)
+Each CRITERION described below has a `description` field that you MUST use to:
+- Extract from the PAPER TEXT and/or CODE_REPOSITORY the parts of text relevant to evaluating the criterion. You must place these parts in the `extracted` field of the output.
+- Provide an explanation of the evaluation you assign for that criterion. This explanation must be placed in the `score_explanation` field.
+- Provide a score for the paper regarding the criterion, based on the content you produced in the `score` field. The score must be an INTEGER between 0 and 100. A score of 0 means that no information related to that criterion is present, while 100 means the paper contains all the necessary information for reproducibility. Scores in between represent partial completeness. When assigning the score, avoid being overly rigid with the description. It is not mandatory for the paper to contain every item listed in the description, but the paper must provide the necessary information to be considered reproducible.
+For certain criteria, it is possible that no text is available to evaluate. IF you infer from the context that the paper should satisfy a given criterion but no relevant information is present, assign a null score, insert the phrase "No information extracted for this criterion" in the `extracted` field, but still explain why no information was found. IF instead the paper, by its nature, does not need to be evaluated for a given criterion, the evaluation should be N/A, corresponding to a score of -1.
+The output you must produce is a JSON, YOU MUST RESPECT THIS OUTPUT FORMAT without adding any other text or markdown.
      """
 
 
@@ -239,11 +306,12 @@ def code_tool():
     return tools, tool_instruction
 
 
-def analyze_with_llm(
+def llm_analysis(
     client: OpenAI,
     system_prompt: str,
     pdf_text: str,
     config: dict,
+    code_text: Optional[str] = None,
     progress_callback: Optional[callable] = None,
 ) -> Dict[str, Any]:
     """Get JSON response from the LLM model.
@@ -261,35 +329,47 @@ def analyze_with_llm(
             "role": "system",
             "content": system_prompt,
         },
-        {"role": "user", "content": pdf_text},
+        {
+            "role": "user",
+            "content": f"PAPER TEXT:\n{pdf_text}\nCODE REPOSITORY:\n{code_text or 'Not provided'}",
+        },
     ]
 
     if "reasoning" in config:
         reasoning = {"effort": config["reasoning"].get("effort", "none")}
 
-    # Check token limit before making API call
-    check_token_limit(config["token_var"])
-
     if progress_callback:
         progress_callback("Checking token limits and preparing request...")
 
+    # Check token limit before making API call
+    try:
+        check_token_limit(config["token_var"])
+    except TokenLimitExceededError as e:
+        if progress_callback:
+            progress_callback("Token limit exceeded.")
+
     code_text = None
+
+    if progress_callback:
+        progress_callback("Waiting for LLM response...")
+
     iteration_start = time.perf_counter()
 
+    # GPT MODELS
+
     if config["model"].startswith("gpt"):
+        ##Tool request:  WORK IN PROGRESS - DO NNOT USE IT YET ##
         if config["code_tool"]:
             tools, tool_instruction = code_tool()
-            # add tool instruction to the system prompt
             input_list[0]["content"] = input_list[0]["content"] + tool_instruction
-            if progress_callback:
-                progress_callback("Waiting for LLM response...")
 
             response = client.responses.create(
                 model=config["model"],
                 input=input_list,
                 temperature=config.get("temperature", 1.0),
                 reasoning=reasoning,
-                text=JSON_SCHEMA,
+                # text=JSON_SCHEMA,
+                text_format=PaperAnalysis,
                 tools=tools,
             )
 
@@ -304,6 +384,8 @@ def analyze_with_llm(
                                 "LLM requesting code, starting ingestion process..."
                             )
                         args = json.loads(item.arguments)
+                        print("=" * 50)
+                        print(args)
                         code_text = get_code(**args)
                         paper = Paper.objects.filter(id=config["paper_id"]).first()
                         paper.code_text = code_text
@@ -326,54 +408,102 @@ def analyze_with_llm(
                 input=input_list,
                 temperature=config.get("temperature", 1.0),
                 reasoning=reasoning,
-                text=JSON_SCHEMA,
+                # text=JSON_SCHEMA,
+                text_format=PaperAnalysis,
                 tools=tools,
             )
 
         else:
-            # Code already ingested or not available, just do regular request
-            if progress_callback:
-                progress_callback("Waiting for LLM response...")
-            response = client.responses.create(
+            # regular request - Code already ingested or not available
+
+            response = client.responses.parse(
                 model=config["model"],
                 input=input_list,
                 temperature=config.get("temperature", 1.0),
                 reasoning=reasoning,
-                text=JSON_SCHEMA,
+                # text=JSON_SCHEMA,
+                text_format=PaperAnalysis,
             )
 
         output_tokens = response.usage.output_tokens
         input_tokens = response.usage.input_tokens
         total_tokens = response.usage.total_tokens
-        response = response.output_text
+        response = response.output_parsed
 
-    elif config["model"].startswith("kimi-k2"):
-        completion = client.chat.completions.create(
-            model=config["model"],
-            messages=input_list,
-            temperature=config.get("temperature", 1.0),
-        )
-        response = completion.choices[0].message.content
-        output_tokens = completion.usage.completion_tokens
-        input_tokens = completion.usage.prompt_tokens
-        total_tokens = completion.usage.total_tokens
+    # NON GPT MODELS ## WORK IN PROGRESS - DO NOT USE (C'è da creare un prompt per cui i modelli rispondano in formato JSON)##
+    # elif config["model"].startswith("kimi-k2"):
+    #     completion = client.chat.completions.create(
+    #         model=config["model"],
+    #         messages=input_list,
+    #         temperature=config.get("temperature", 1.0),
+    #     )
+    #     response = completion.choices[0].message.content
+    #     output_tokens = completion.usage.completion_tokens
+    #     input_tokens = completion.usage.prompt_tokens
+    #     total_tokens = completion.usage.total_tokens
 
     else:
-        completion = client.chat.completions.create(
-            model=config["model"],
-            messages=input_list,
-            temperature=config.get("temperature", 1.0),
-            response_format={"type": "json_object"},
+        time.sleep(1)
+        # create a dummy response as PaperAnalysis with empty fields
+        result = PaperAnalysis(
+            code=Code(
+                url="",
+                extracted="No information extracted for this criterion",
+                score_explanation="No information extracted for this criterion",
+                score=0,
+            ),
+            datasets=Datasets(extracted=[]),
+            annotation=GeneralCriteria(
+                extracted="No information extracted for this criterion",
+                score_explanation="No information extracted for this criterion",
+                score=0,
+            ),
+            preprocessing=GeneralCriteria(
+                extracted="No information extracted for this criterion",
+                score_explanation="No information extracted for this criterion",
+                score=0,
+            ),
+            evaluation=GeneralCriteria(
+                extracted="No information extracted for this criterion",
+                score_explanation="No information extracted for this criterion",
+                score=0,
+            ),
+            licensing=GeneralCriteria(
+                extracted="No information extracted for this criterion",
+                score_explanation="No information extracted for this criterion",
+                score=0,
+            ),
         )
-        response = completion.choices[0].message.content
-        output_tokens = completion.usage.completion_tokens
-        input_tokens = completion.usage.prompt_tokens
-        total_tokens = completion.usage.total_tokens
+
+        return {
+            "model": config.get("visual_name", config["model_key"]),
+            "result": result,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "duration": round(0.0, 2),
+        }
+    #     input_list[0]["content"] = (
+    #         input_list[0]["content"]
+    #         + "\n Respond in JSON format only. following this schema:"
+    #         + str(json_object)
+    #     )
+    #     completion = client.chat.completions.create(
+    #         model=config["model"],
+    #         messages=input_list,
+    #         temperature=config.get("temperature", 1.0),
+    #         response_format={"type": "json_object"},
+    #     )
+    #     response = completion.choices[0].message.content
+    #     output_tokens = completion.usage.completion_tokens
+    #     input_tokens = completion.usage.prompt_tokens
+    #     total_tokens = completion.usage.total_tokens
 
     duration = time.perf_counter() - iteration_start
 
     if progress_callback:
-        progress_callback("Parsing response...")
+        progress_callback(
+            f"LLM response received in {round(duration, 2)} seconds. Parsing response... "
+        )
 
     # upload code to DB
     if "paper_id" in config and code_text is not None:
@@ -381,13 +511,13 @@ def analyze_with_llm(
         paper.code_text = code_text
         paper.save(update_fields=["code_text"])
 
-    try:
-        response = json.loads(response)
-    except json.JSONDecodeError as e:
-        response = {
-            "error": f"Error decoding JSON: {e}",
-            "raw_content": response,
-        }
+    # try:
+    #     json_response = json.loads(response)
+    # except json.JSONDecodeError as e:
+    #     response = {
+    #         "error": f"Error decoding JSON (LLM response not well formatted): {e}",
+    #         "raw_content": response,
+    #     }
 
     update_token(total_tokens, config["token_var"])
 
@@ -416,7 +546,7 @@ def _save_analysis_to_db(
         paper_id: The ID of the Paper model instance.
         model_key: The key of the model used for analysis.
         config: Model configuration dictionary.
-        result: The analysis result from analyze_with_llm or error dict.
+        result: The analysis result from llm_analysis or error dict.
         user_id: The ID of the user who initiated the analysis.
     """
     try:
@@ -441,7 +571,12 @@ def _save_analysis_to_db(
         code_data = llm_response.get("code", {})
         if isinstance(code_data, dict):
             code_url = code_data.get("url")
-            if code_url and isinstance(code_url, str) and code_url.startswith("http"):
+            if (
+                code_url
+                and isinstance(code_url, str)
+                and code_url.startswith("http")
+                and paper.code_url == ""
+            ):
                 paper.code_url = code_url
                 paper.save(update_fields=["code_url"])
 
@@ -469,20 +604,11 @@ def _save_analysis_to_db(
             raw_response=llm_response,
         )
 
-        # Map of scored criterion keys to their LLM response keys
-        criterion_mappings = {
-            "code_repository": "code",
-            "annotation": "annotation",
-            "preprocessing": "preprocessing",
-            "evaluation": "evaluation",
-            "licensing_and_ethical_transparency": "licensing_and_ethical_transparency",
-        }
-
         # Save each criterion result
-        for criterion_key, response_key in criterion_mappings.items():
+        for criterion_key in llm_response.keys():
             try:
                 criterion = Criterion.objects.get(key=criterion_key)
-                criterion_data = llm_response.get(response_key, {})
+                criterion_data = llm_response.get(criterion_key, {})
 
                 if isinstance(criterion_data, dict):
                     AnalysisCriterion.objects.create(
@@ -515,22 +641,20 @@ def create_analysis_task(
     task_id = str(uuid.uuid4())
 
     # Get model configs from database
-    all_model_configs = get_model_configs()
+    model_configs = get_model_configs()
 
-    # Filter models based on selection
+    # Filter models
     if selected_models:
-        models_to_use = {
-            k: v for k, v in all_model_configs.items() if k in selected_models
-        }
+        models_to_use = {k: v for k, v in model_configs.items() if k in selected_models}
     else:
-        models_to_use = all_model_configs
+        models_to_use = model_configs
 
     with _tasks_lock:
         _analysis_tasks[task_id] = {
             "status": "pending",
             "progress": 0,
             "current_step": "Initializing...",
-            "total_steps": len(models_to_use),  # Only LLM analysis steps now
+            "total_steps": len(models_to_use),
             "completed_steps": 0,
             "results": {},
             "error": None,
@@ -585,15 +709,19 @@ def run_analysis_task(task_id: str):
                 paper_id = task["paper_id"]
                 user_id = task.get("user_id")
                 selected_models = task.get("selected_models", [])
+                total_steps = task.get("total_steps", 0)
+                completed_steps = task.get("completed_steps", 0)
 
             # Get model configs from database
             model_configs = get_model_configs()
 
             # Get system prompt
             system_prompt = _get_system_prompt()
+            system_prompt = system_prompt + "\n" + get_criterions()
 
             # Analyze with selected LLM models
             results = {}
+
             for model_key in selected_models:
                 config = model_configs.get(model_key)
                 if not config:
@@ -609,31 +737,42 @@ def run_analysis_task(task_id: str):
                 _update_progress(f"Checking for pre-existing code...", increment=False)
                 code_text = None
                 paper = Paper.objects.filter(id=paper_id).first()
-                if paper.code_text is None:
-                    if paper.code_url is not None:
+                if paper.code_text == "":
+                    if paper.code_url == "":
+                        # GITHUB url regex
+                        url_pattern = re.compile(
+                            r"https?://(?:www\.)?github\.com/[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]+(?:\.git)?"
+                        )
+                        match = url_pattern.search(paper.text)
+                        url = match.group(0) if match else None
+                        if url:
+                            url = url.rstrip(".,;:!?)\"]'")
+                            print("MATCH:", url)
+                            paper.code_url = url
+
+                    # GITHUB ingestion
+                    if "github" in paper.code_url:
                         _update_progress(
                             f"Code not ingested, starting ingestion process...",
                             increment=False,
                         )
                         code_text = get_code(paper.code_url)
+                        paper.code_text = code_text
+                        paper.save(update_fields=["code_text", "code_url"])
+                        config["code_tool"] = False
+
                         _update_progress(
                             f"Ingestion completed successfully, continuing analysis...",
                             increment=False,
                         )
 
-                        paper.code_text = code_text
-                        paper.save(update_fields=["code_text"])
-                        config["code_tool"] = False
                     else:
+                        # TODO Abilitare code tool di GPT
                         config["code_tool"] = True
                         config["paper_id"] = paper_id
 
                 else:
-                    config["code"] = paper.code_text
-                    _update_progress(
-                        f"Code already ingested, continuing analysis...",
-                        increment=False,
-                    )
+                    code_text = paper.code_text
                     config["code_tool"] = False
 
                 _update_progress(
@@ -642,18 +781,28 @@ def run_analysis_task(task_id: str):
 
                 # Create a progress callback for detailed updates (no increment to prevent overflow)
                 def model_progress(msg):
-                    _update_progress(f"{visual_name}: {msg}", increment=False)
+                    _update_progress(
+                        f"[{completed_steps+1}/{total_steps}] {visual_name}: {msg}",
+                        increment=False,
+                    )
 
-                result = analyze_with_llm(
+                result = llm_analysis(
                     client,
                     system_prompt,
                     pdf_text,
                     config,
+                    code_text=code_text,
                     progress_callback=model_progress,
                 )
+
+                result["result"] = result["result"].dict()
+
                 results[model_key] = result
 
                 # Save analysis to database
+                _update_progress(
+                    f"Saving analysis results to database...", increment=False
+                )
                 _save_analysis_to_db(paper_id, model_key, config, result, user_id)
 
                 _update_progress(f"Completed {visual_name}")
@@ -675,7 +824,6 @@ def run_analysis_task(task_id: str):
                     task["status"] = "error"
                     task["error"] = str(e)
                     task["current_step"] = f"Error: {str(e)}"
-            raise  # Re-raise to let Django show its debug view
 
     # Start background thread
     thread = threading.Thread(target=_run, daemon=True)
