@@ -196,7 +196,8 @@ class AnalysisDetailView(LoginRequiredMixin, View):
             "input_tokens": analysis.input_tokens,
             "output_tokens": analysis.output_tokens,
             "error": analysis.error,
-            "raw_response": analysis.raw_response,
+            "result": analysis.raw_response,
+            "final_score": analysis.final_score(),
         }
 
         return JsonResponse(data)
@@ -315,7 +316,6 @@ class CheckPastAnalysesView(LoginRequiredMixin, View):
                         "has_error": bool(analysis.error),
                     }
                 )
-        print(title)
         return JsonResponse(
             {
                 "title": title,

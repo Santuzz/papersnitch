@@ -30,6 +30,7 @@ from webApp.models import (
     AnalysisCriterion,
     Dataset,
     LLMModelConfig,
+    Prompt,
 )
 from webApp.functions import (
     get_code,
@@ -264,22 +265,6 @@ json_object = {
 # Store for active analysis tasks
 _analysis_tasks: Dict[str, Dict[str, Any]] = {}
 _tasks_lock = threading.Lock()
-
-
-def _get_system_prompt() -> str:
-    """Generate the system prompt for the LLM."""
-    return f"""You are an evaluator specialized in assessing how reproducible the results in a published scientific paper (mainly in the field of artificial intelligence) are for other people. A scientific paper should be SELF-CONTAINED, meaning it must include everything necessary for another individual to replicate the results obtained by the authors. This requirement is not always met, and that is why your help is needed.
-Reproducibility evaluation is based on:
-- CRITERIONS, a group of aspects that must be evaluated individually
-- PAPER TEXT, the text of the scientific paper, which will be your primary source for extracting information used in the evaluation
-- CODE REPOSITORY, documentation and any code components relevant to specific criteria that depend on it. This text may be absent for various reasons (e.g., the paper does not reference any software and therefore does not need to provide code; the authors choose not to share the code they used—an improper practice)
-Each CRITERION described below has a `description` field that you MUST use to:
-- Extract from the PAPER TEXT and/or CODE_REPOSITORY the parts of text relevant to evaluating the criterion. You must place these parts in the `extracted` field of the output.
-- Provide an explanation of the evaluation you assign for that criterion. This explanation must be placed in the `score_explanation` field.
-- Provide a score for the paper regarding the criterion, based on the content you produced in the `score` field. The score must be an INTEGER between 0 and 100. A score of 0 means that no information related to that criterion is present, while 100 means the paper contains all the necessary information for reproducibility. Scores in between represent partial completeness. When assigning the score, avoid being overly rigid with the description. It is not mandatory for the paper to contain every item listed in the description, but the paper must provide the necessary information to be considered reproducible.
-For certain criteria, it is possible that no text is available to evaluate. IF you infer from the context that the paper should satisfy a given criterion but no relevant information is present, assign a null score, insert the phrase "No information extracted for this criterion" in the `extracted` field, but still explain why no information was found. IF instead the paper, by its nature, does not need to be evaluated for a given criterion, the evaluation should be N/A, corresponding to a score of -1.
-The output you must produce is a JSON, YOU MUST RESPECT THIS OUTPUT FORMAT without adding any other text or markdown.
-     """
 
 
 def code_tool():
@@ -625,6 +610,9 @@ def _save_analysis_to_db(
 
     except Exception as e:
         logger.exception(f"Error saving analysis to database: {e}")
+        return None
+
+    return analysis
 
 
 def create_analysis_task(
@@ -716,8 +704,8 @@ def run_analysis_task(task_id: str):
             model_configs = get_model_configs()
 
             # Get system prompt
-            system_prompt = _get_system_prompt()
-            system_prompt = system_prompt + "\n" + get_criterions()
+            system_prompt = Prompt.objects.filter(name="system_prompt").first()
+            system_prompt = system_prompt.template + "\n" + get_criterions()
 
             # Analyze with selected LLM models
             results = {}
@@ -803,7 +791,12 @@ def run_analysis_task(task_id: str):
                 _update_progress(
                     f"Saving analysis results to database...", increment=False
                 )
-                _save_analysis_to_db(paper_id, model_key, config, result, user_id)
+                analysis = _save_analysis_to_db(
+                    paper_id, model_key, config, result, user_id
+                )
+
+                if analysis:
+                    results[model_key]["final_score"] = analysis.final_score()
 
                 _update_progress(f"Completed {visual_name}")
 

@@ -11,6 +11,7 @@ from .models import (
     BugReport,
     TokenUsage,
     LLMModelConfig,
+    Prompt,
 )
 
 
@@ -185,3 +186,10 @@ class LLMModelConfigAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+
+@admin.register(Prompt)
+class PromptAdmin(admin.ModelAdmin):
+    list_display = ["name", "template", "created_at", "updated_at"]
+    search_fields = ["name", "template"]
+    readonly_fields = ["created_at", "updated_at"]

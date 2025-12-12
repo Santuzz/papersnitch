@@ -158,6 +158,9 @@ class Criterion(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Criterion Name")
     key = models.CharField(max_length=50, unique=True, verbose_name="Criterion Key")
     description = models.TextField(verbose_name="Description", blank=True, null=True)
+    weight = models.FloatField(
+        verbose_name="Weight", default=1.0, blank=True, null=True
+    )
 
     class Meta:
         verbose_name = "Criterion"
@@ -208,6 +211,29 @@ class Analysis(models.Model):
         verbose_name = "Analysis"
         verbose_name_plural = "Analyses"
         ordering = ["-created_at"]
+
+    def final_score(self):
+        """
+        Calculates the weighted average score of the analysis based on criteria weights.
+        Criteria with negative scores are ignored.
+        """
+        total_weighted_score = 0
+        total_weight = 0
+
+        criteria_results = self.criteria_results.select_related("criterion").all()
+
+        for result in criteria_results:
+            score = result.score
+            weight = result.criterion.weight
+
+            if score is not None and score >= 0 and weight is not None and weight > 0:
+                total_weighted_score += score * weight
+                total_weight += weight
+
+        if total_weight == 0:
+            return 0
+
+        return int(total_weighted_score / total_weight)
 
     def __str__(self):
         return f"{self.paper.title} - {self.model_name}"
@@ -473,3 +499,27 @@ class LLMModelConfig(models.Model):
             config.model_key: config.visual_name
             for config in cls.objects.filter(is_active=True)
         }
+
+
+class Prompt(models.Model):
+    """Stores prompt templates for LLM interactions."""
+
+    name = models.CharField(
+        max_length=100,
+        verbose_name="Prompt Name",
+        help_text="Name for the prompt template",
+    )
+    template = models.TextField(
+        verbose_name="Prompt Template",
+        help_text="The actual prompt template text with placeholders",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+
+    class Meta:
+        verbose_name = "Prompt"
+        verbose_name_plural = "Prompts"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name

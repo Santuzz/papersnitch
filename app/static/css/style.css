@@ -294,3 +294,109 @@ a:hover {
   background-color: var(--teal);
   color: var(--bg-white);
 }
+
+/* Analysis Renderer Styles */
+.score-badge {
+  font-size: 1.5rem;
+  width: 50px;
+  height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.score-0 {
+  background-color: #c0392b;
+  color: white;
+}
+.score-1 {
+  background-color: #e74c3c;
+  color: white;
+}
+.score-2 {
+  background-color: #f1c40f;
+  color: #2e2e2e;
+}
+.score-3 {
+  background-color: #1abc9c;
+  color: white;
+}
+.score-4 {
+  background-color: #0e8c82;
+  color: white;
+}
+.score-5 {
+  background-color: #0a3d62;
+  color: white;
+}
+
+.criterion-card {
+  margin-bottom: 1rem;
+  border-left: 4px solid #1abc9c;
+  background-color: #ffffff;
+  transition: box-shadow 0.2s ease;
+}
+
+.criterion-card:hover {
+  box-shadow: 0 4px 15px rgba(10, 61, 98, 0.15);
+}
+
+.extracted-text {
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #f7f7f7;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  border: 1px solid #e8e8e8;
+  color: #2e2e2e;
+}
+
+.dataset-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #1abc9c 0%, #0e8c82 100%);
+  color: white;
+  padding: 4px 10px;
+  margin: 2px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+}
+
+.dataset-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.dataset-list li {
+  display: inline-block;
+  background: linear-gradient(135deg, #1abc9c 0%, #0e8c82 100%);
+  color: white;
+  padding: 6px 14px;
+  margin: 3px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.card-header.collapsible {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.card-header.collapsible:hover {
+  background-color: #e8e8e8 !important;
+}
+
+.card-header.collapsible .toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.card-header.collapsible.collapsed .toggle-icon {
+  transform: rotate(-90deg);
+}
+
+.criterion-card .card-body {
+  border-top: 1px solid #e8e8e8;
+}

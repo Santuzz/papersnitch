@@ -65,7 +65,7 @@
                                         <div class="d-flex align-items-center">
                                             <i class="fas fa-chevron-right toggle-icon mr-3"></i>
                                             <div>
-                                                <h6 class="mb-0 paper-title">{{ paper_data.paper.title|truncatechars:80 }}</h6>
+                                                <h6 class="mb-0 text-primary">{{ paper_data.paper.title|truncatechars:80 }}</h6>
                                                 <small class="text-muted">
                                                     {{ paper_data.analyses|length }} analysis{{ paper_data.analyses|length|pluralize:"es" }} | 
                                                     Last: {{ paper_data.latest_analysis|date:"M d, Y H:i" }}
@@ -192,52 +192,6 @@
         transform: rotate(90deg);
     }
     
-    .paper-title {
-        color: #0A3D62;
-    }
-    
-    .score-badge {
-        font-size: 1.2rem;
-        width: 40px;
-        height: 40px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        font-weight: 600;
-    }
-    
-    .score-0 { background-color: #C0392B; color: white; }
-    .score-1 { background-color: #E74C3C; color: white; }
-    .score-2 { background-color: #F1C40F; color: #2E2E2E; }
-    .score-3 { background-color: #1ABC9C; color: white; }
-    .score-4 { background-color: #0E8C82; color: white; }
-    .score-5 { background-color: #0A3D62; color: white; }
-    
-    .criterion-card {
-        margin-bottom: 1rem;
-        border-left: 4px solid #1ABC9C;
-    }
-    
-    .extracted-text {
-        max-height: 150px;
-        overflow-y: auto;
-        background-color: #F7F7F7;
-        padding: 12px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        border: 1px solid #E8E8E8;
-    }
-    
-    .dataset-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #1ABC9C 0%, #0E8C82 100%);
-        color: white;
-        padding: 4px 10px;
-        margin: 2px;
-        border-radius: 15px;
-        font-size: 0.8rem;
-    }
     
     #paper-search:focus {
         border-color: #1ABC9C;
@@ -293,7 +247,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    function loadAnalysisDetails(analysisId) {
+    function loadAnalysisDetailsOld(analysisId) {
         const modalContent = document.getElementById('analysis-modal-content');
         modalContent.innerHTML = `
             <div class="text-center py-5">
@@ -302,7 +256,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        fetch(`/profile/analysis/${analysisId}/`)
+        fetch(`/analysis/${analysisId}/`)
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -314,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                modalContent.innerHTML = renderAnalysisDetails(data);
+                modalContent.innerHTML = renderAnalysisDetails(data, true);
             })
             .catch(error => {
                 modalContent.innerHTML = `
@@ -325,16 +279,26 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
     
-    function renderAnalysisDetails(data) {
+    function renderAnalysisDetailsOld(data) {
         let html = `
             <div class="mb-3">
-                <h6 class="text-primary"><i class="fas fa-file-alt mr-2"></i>${data.paper_title}</h6>
-                <div class="text-muted small">
-                    <span class="badge badge-info mr-2">${data.model_name}</span>
-                    <i class="fas fa-calendar mr-1"></i>${data.created_at} |
-                    <i class="fas fa-clock mr-1"></i>${data.duration}s |
-                    <i class="fas fa-arrow-down mr-1"></i>${data.input_tokens} tokens |
-                    <i class="fas fa-arrow-up mr-1"></i>${data.output_tokens} tokens
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="text-primary"><i class="fas fa-file-alt mr-2"></i>${data.paper_title}</h6>
+                        <div class="text-muted small">
+                            <span class="badge badge-info mr-2">${data.model_name}</span>
+                            <i class="fas fa-calendar mr-1"></i>${data.created_at} |
+                            <i class="fas fa-clock mr-1"></i>${data.duration}s |
+                            <i class="fas fa-arrow-down mr-1"></i>${data.input_tokens} tokens |
+                            <i class="fas fa-arrow-up mr-1"></i>${data.output_tokens} tokens
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="h4 mb-0 text-primary font-weight-bold">
+                            ${data.final_score !== undefined ? data.final_score : 'N/A'}
+                        </div>
+                        <small class="text-muted">Final Score</small>
+                    </div>
                 </div>
             </div>
         `;
@@ -380,7 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const section of scoredSections) {
             const sectionData = result[section.key];
             const score = sectionData && typeof sectionData.score === 'number' ? sectionData.score : 0;
-            console.log('Rendering section:', section.key, 'Result:', sectionData);
+
             html += `
                 <div class="card criterion-card mb-3">
                     <div class="card-header bg-light">
@@ -391,7 +355,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                        <i class="fas fa-external-link-alt mr-1"></i>View Repository
                                    </a>` 
                                 : ''}</h6>
-                            <span class="score-badge score-${score}">${score}</span>
+                            ${score === -1 
+                                ? `<span class="score-badge score-${score}">n/a</span>` 
+                                : `<span class="score-badge score-${score}">${score}</span>`}
                         </div>
                     </div>
                     <div class="card-body">

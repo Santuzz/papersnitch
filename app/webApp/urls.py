@@ -39,7 +39,7 @@ urlpatterns = [
     # path("home/", HomePageView.as_view(), name="homepage"),
     path("profile/", ProfileView.as_view(), name="profile"),
     path(
-        "profile/analysis/<int:analysis_id>/",
+        "analysis/<int:analysis_id>/",
         AnalysisDetailView.as_view(),
         name="analysis_detail",
     ),
@@ -54,10 +54,10 @@ urlpatterns = [
         AnalysisCleanupView.as_view(),
         name="analysis_cleanup",
     ),
-    path("report-bug/", BugReportView.as_view(), name="bug_report"),
     path(
         "analyze/check-past/",
         CheckPastAnalysesView.as_view(),
         name="check_past_analyses",
     ),
+    path("report-bug/", BugReportView.as_view(), name="bug_report"),
 ]

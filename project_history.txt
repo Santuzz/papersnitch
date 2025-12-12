@@ -116,13 +116,22 @@ Aggiunto controllo paper già analizzati mostrando la history (query con la prim
 Sistemato retrieve del codice: Aggiunta regex per trovare codice nel testo del paper. Se il codice è di github
 minor graphic update
 
+11/12/2025
+Aggiunto peso ai criteri di valutazione
+Creato modello per prompt
+
+12/12/2025
+Mergiata visuale dettagli delle analisi
+
+
+
 TODO:
 Short term:
-    - 
-    - Aggiungere combinazione score con pesi (mostrarlo nell'history e aggiungerlo a modello)
+    - Separazione prod/dev
+    - Rendere i risultati di ricerca dell'analisi collassabili
+    - Fare in modo che il risultato dell'analisi sia una richiesta get di AnalysisDetailView
     - refinire conteggio token che si resetta ogni giorno
     - Aggiungere alert per token in esaurimento
-    - Valutazione non applicabile (lato LLM devono fornire voto negativo)
 
 
 Long term:
