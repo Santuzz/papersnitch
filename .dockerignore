@@ -1,3 +1,6 @@
+mysql_dev/
+mysql_prod/
+
 .venv/
 __pycache__/
 *.pyc

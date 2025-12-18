@@ -26,6 +26,7 @@ from django.contrib.auth.models import User
 from webApp.models import (
     Paper,
     Analysis,
+    AnalysisTask,
     Criterion,
     AnalysisCriterion,
     Dataset,
@@ -262,9 +263,6 @@ json_object = {
         "score": "INTEGER Score indicating how well the paper addresses licensing and ethics",
     },
 }
-# Store for active analysis tasks
-_analysis_tasks: Dict[str, Dict[str, Any]] = {}
-_tasks_lock = threading.Lock()
 
 
 def code_tool():
@@ -428,7 +426,7 @@ def llm_analysis(
     #     total_tokens = completion.usage.total_tokens
 
     else:
-        time.sleep(1)
+        time.sleep(10)
         # create a dummy response as PaperAnalysis with empty fields
         result = PaperAnalysis(
             code=Code(
@@ -626,8 +624,6 @@ def create_analysis_task(
     Returns:
         Task ID for tracking progress.
     """
-    task_id = str(uuid.uuid4())
-
     # Get model configs from database
     model_configs = get_model_configs()
 
@@ -637,22 +633,27 @@ def create_analysis_task(
     else:
         models_to_use = model_configs
 
-    with _tasks_lock:
-        _analysis_tasks[task_id] = {
-            "status": "pending",
-            "progress": 0,
-            "current_step": "Initializing...",
-            "total_steps": len(models_to_use),
-            "completed_steps": 0,
-            "results": {},
-            "error": None,
-            "paper_id": paper.id,
-            "paper_text": paper.text,
-            "user_id": user_id,
-            "selected_models": list(models_to_use.keys()),
-        }
+    user = None
+    if user_id:
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            pass
 
-    return task_id
+    task = AnalysisTask.objects.create(
+        status="pending",
+        progress=0,
+        current_step="Initializing...",
+        total_steps=len(models_to_use),
+        completed_steps=0,
+        results={},
+        error=None,
+        paper=paper,
+        user=user,
+        selected_models=list(models_to_use.keys()),
+    )
+
+    return str(task.id)
 
 
 def get_task_status(task_id: str) -> Optional[Dict[str, Any]]:
@@ -662,10 +663,22 @@ def get_task_status(task_id: str) -> Optional[Dict[str, Any]]:
     Returns:
         Task status dictionary or None if not found.
     """
-    with _tasks_lock:
-        task = _analysis_tasks.get(task_id)
-        if task:
-            return task.copy()
+    try:
+        task = AnalysisTask.objects.get(id=task_id)
+        return {
+            "status": task.status,
+            "progress": task.progress,
+            "current_step": task.current_step,
+            "total_steps": task.total_steps,
+            "completed_steps": task.completed_steps,
+            "results": task.results,
+            "error": task.error,
+            "paper_id": task.paper.id,
+            "paper_text": task.paper.text,
+            "user_id": task.user.id if task.user else None,
+            "selected_models": task.selected_models,
+        }
+    except (AnalysisTask.DoesNotExist, ValueError):
         return None
 
 
@@ -676,29 +689,32 @@ def run_analysis_task(task_id: str):
     """
 
     def _update_progress(step: str, increment: bool = True):
-        with _tasks_lock:
-            task = _analysis_tasks.get(task_id)
-            if task:
-                task["current_step"] = step
-                if increment:
-                    task["completed_steps"] += 1
-                task["progress"] = int(
-                    (task["completed_steps"] / task["total_steps"]) * 100
-                )
+        try:
+            task = AnalysisTask.objects.get(id=task_id)
+            task.current_step = step
+            if increment:
+                task.completed_steps += 1
+            if task.total_steps > 0:
+                task.progress = int((task.completed_steps / task.total_steps) * 100)
+            task.save(update_fields=["current_step", "completed_steps", "progress"])
+        except AnalysisTask.DoesNotExist:
+            pass
 
     def _run():
         try:
-            with _tasks_lock:
-                task = _analysis_tasks.get(task_id)
-                if not task:
-                    return
-                task["status"] = "running"
-                pdf_text = task["paper_text"]
-                paper_id = task["paper_id"]
-                user_id = task.get("user_id")
-                selected_models = task.get("selected_models", [])
-                total_steps = task.get("total_steps", 0)
-                completed_steps = task.get("completed_steps", 0)
+            try:
+                task = AnalysisTask.objects.get(id=task_id)
+                task.status = "running"
+                task.save(update_fields=["status"])
+
+                pdf_text = task.paper.text
+                paper_id = task.paper.id
+                user_id = task.user.id if task.user else None
+                selected_models = task.selected_models
+                total_steps = task.total_steps
+                completed_steps = task.completed_steps
+            except AnalysisTask.DoesNotExist:
+                return
 
             # Get model configs from database
             model_configs = get_model_configs()
@@ -725,8 +741,8 @@ def run_analysis_task(task_id: str):
                 _update_progress(f"Checking for pre-existing code...", increment=False)
                 code_text = None
                 paper = Paper.objects.filter(id=paper_id).first()
-                if paper.code_text == "":
-                    if paper.code_url == "":
+                if paper.code_text == "" or paper.code_text is None:
+                    if paper.code_url == "" or paper.code_url is None:
                         # GITHUB url regex
                         url_pattern = re.compile(
                             r"https?://(?:www\.)?github\.com/[A-Za-z0-9-]{1,39}/[A-Za-z0-9_.-]+(?:\.git)?"
@@ -735,10 +751,10 @@ def run_analysis_task(task_id: str):
                         url = match.group(0) if match else None
                         if url:
                             url = url.rstrip(".,;:!?)\"]'")
-                            print("MATCH:", url)
                             paper.code_url = url
 
                     # GITHUB ingestion
+
                     if "github" in paper.code_url:
                         _update_progress(
                             f"Code not ingested, starting ingestion process...",
@@ -755,9 +771,12 @@ def run_analysis_task(task_id: str):
                         )
 
                     else:
+                        # To remove the line below after implement the tool code
+                        config["code_tool"] = False
+
                         # TODO Abilitare code tool di GPT
-                        config["code_tool"] = True
-                        config["paper_id"] = paper_id
+                        # config["code_tool"] = True
+                        # config["paper_id"] = paper_id
 
                 else:
                     code_text = paper.code_text
@@ -801,22 +820,28 @@ def run_analysis_task(task_id: str):
                 _update_progress(f"Completed {visual_name}")
 
             # Mark as completed
-            with _tasks_lock:
-                task = _analysis_tasks.get(task_id)
-                if task:
-                    task["status"] = "completed"
-                    task["progress"] = 100
-                    task["current_step"] = "Analysis complete"
-                    task["results"] = results
+            try:
+                task = AnalysisTask.objects.get(id=task_id)
+                task.status = "completed"
+                task.progress = 100
+                task.current_step = "Analysis complete"
+                task.results = results
+                task.save(
+                    update_fields=["status", "progress", "current_step", "results"]
+                )
+            except AnalysisTask.DoesNotExist:
+                pass
 
         except Exception as e:
             logger.exception(f"Error in analysis task {task_id}: {e}")
-            with _tasks_lock:
-                task = _analysis_tasks.get(task_id)
-                if task:
-                    task["status"] = "error"
-                    task["error"] = str(e)
-                    task["current_step"] = f"Error: {str(e)}"
+            try:
+                task = AnalysisTask.objects.get(id=task_id)
+                task.status = "error"
+                task.error = str(e)
+                task.current_step = f"Error: {str(e)}"
+                task.save(update_fields=["status", "error", "current_step"])
+            except AnalysisTask.DoesNotExist:
+                pass
 
     # Start background thread
     thread = threading.Thread(target=_run, daemon=True)
@@ -824,10 +849,11 @@ def run_analysis_task(task_id: str):
 
 
 def cleanup_task(task_id: str):
-    """Remove a completed task from memory.
+    """Remove a completed task from database.
     Args:
         task_id: The task ID to remove.
     """
-    with _tasks_lock:
-        if task_id in _analysis_tasks:
-            del _analysis_tasks[task_id]
+    try:
+        AnalysisTask.objects.filter(id=task_id).delete()
+    except Exception:
+        pass

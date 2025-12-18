@@ -137,15 +137,10 @@ class ProfileView(LoginRequiredMixin, View):
     login_url = "/accounts/login/"
 
     def get(self, request):
-        """Display user profile with analysis history grouped by paper."""
-        user = request.user
+        """Display analysis history grouped by paper."""
 
         # Get all analyses for this user
-        analyses = (
-            Analysis.objects.filter(user=user)
-            .select_related("paper")
-            .order_by("-created_at")
-        )
+        analyses = Analysis.objects.select_related("paper").order_by("-created_at")
 
         # Group analyses by paper
         papers_dict = {}

@@ -7,7 +7,7 @@
 
     <title> Papersnitch - {% block head_title %}{% endblock %}</title>
 
-    <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.ico' %}">
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <!-- FontAwesome CSS -->
     <script src="https://kit.fontawesome.com/825e3a16e3.js" crossorigin="anonymous"></script>
     <!-- Bootstrap CSS -->
@@ -35,9 +35,11 @@
     <div class="collapse navbar-collapse" id="main_nav">
     <ul class="navbar-nav ml-auto align-items-center">
         <li class="nav-item">
-                <button class="btn btn-outline-light btn-sm my-auto" onclick="location.href='{% url 'bug_report' %}'" title="Feedback"> 
-                    <i class="fas fa-comments"></i> Feedback
-                </button>
+                <a href="{% url 'bug_report' %}"
+   class="btn btn-outline-light btn-sm my-auto"
+   title="Feedback">
+    <i class="fas fa-comments"></i> Feedback
+</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'analyze' %}" style="color: white;" title="Analyze Papers">

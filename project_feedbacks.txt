@@ -1,0 +1,45 @@
+Luca
+
+Il bottone per dare un feedback fa il redirect con onclick (onclick="location.href='/report-bug/'"), è una cosa davvero fastidiosa perché non permette di fare ctrl+click.
+
+Il form dei Feedback chiede "Importance", ma non so che importanza dovrei dare ad un mio feedback, la toglierei.
+I "Tips for Good Feedback" sono in fondo, li leggo quando ho già fatto la review e sto per sottometterla. Toglierei o metterei in alto o comunque prima del form "Description" che sto compilando.
+
+
+Passandogli come PDF il paper https://papers.miccai.org/miccai-2025/0971-Paper0752.html, il titolo rilevato è relativo solo alla prima riga "U-Net Transplant: The Role of Pre-training for".
+
+La selezione del modello "Select Models for Analysis" confonde un po', nel senso: "Quale dovrei scegliere e perché?" Sarebbe meglio dal mio punto di vista avere un valore di default, 
+e la selezione del modello diventa un'opzione avanzata o comunque nascosta dal flow principale.
+
+Se ricarico la pagina durante l'analisi del paper mi riporta alla homepage. Sarebbe meglio se portasse a un link con un uuid riguardante il paper. 
+(e.g., https://paper-snitch.ing.unimore.it/analyze/<uuid>) e accedere a quel link porta alle analisi fatte. Attualmente l'unico modo per ripescare una analisi vecchia è caricare 
+il pdf caricato in precedenza. Avere un link diretto ad una analisi permetterebbe di linkare una analisi ad un feedback.
+
+Riguardo all'analisi fatta con GPT 5.1 su UNet Transplant.
+
+Riguardo ai dataset, ci sono parecchie ripetizioni.
+
+Non trova il codice, nell'output viene detto:
+The paper text states: "To support further research, we release the source code and all the model weights in a dedicated repository: https://github.com/LucaLumetti/UNetTransplant." 
+However, the problem statement explicitly indicates that no CODE REPOSITORY content is provided for analysis, so I cannot inspect the repository, its documentation, or structure. 
+Because the criterion requires basing the score only on the extracted text from the code repository itself, and no such text is available, I must treat this as if no usable repository 
+documentation can be evaluated. Therefore, despite the claim that code is released, there is zero information from the repository to assess reproducibility, and the score must be 0.
+
+Si lamenta riguardo qualcosa sulle annotazioni ma non riesco a capire cosa:
+"The paper uses only existing public datasets (AMOS, BTCV Abdomen, Cui, ToothFairy2) and does not describe creating any new annotations or labels. All references to data are in terms 
+of using pre-existing segmentations and defining task splits over existing labeled structures (e.g., Mandible, Pharynx, Teeth, Canals; Liver, Spleen, Kidney, Stomach). There is no 
+description of how original annotations were produced, who annotated them, tools used, annotation guidelines, inter-annotator agreement, or quality control. Since annotation procedures 
+are not discussed at all in the provided text, there is no information to extract for this criterion. Because the work relies on already-annotated public datasets, one could argue 
+annotation methodology is outside the scope of this paper; however, the criterion is about describing annotation if it is part of the paper’s contribution. Here, they do not contribute 
+new annotations, so annotation details are not necessary for reproducing their experiments beyond relying on the public datasets. Still, per instructions, when there is no relevant 
+information present but the paper does use labeled data, the score should be 0, not N/A."
+
+Si lamenta che nel preprocessing mancano dettagli, vorrebbe alcuni dettagli che non penso di aver visto mai in nessun paper (No software or framework details for preprocessing.) e 
+comunque c'è il codice, quindi la mancanza di dettagli è abbastanza giustificata.
+
+Per la Licenza si lamenta che non c'è niente e mi dà uno score di zero. "No IRB/ethics board approval statements, informed consent, anonymization details, or privacy discussions, 
+despite using medical imaging data." ma i dataset usati sono pubblici, non vedo perché dovrebbe esserci una roba del genere nel mio paper. Si lamenta anche che manca la licenza del codice.
+
+Riguardo alla Review fatta con GPT-5-mini:
+I dataset estratti sono molto meglio: 4 e corretti
+Il resto è abbastanza simile

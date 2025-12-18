@@ -354,6 +354,7 @@
 </style>
 
 <script>
+
 document.addEventListener('DOMContentLoaded', function() {
     const uploadForm = document.getElementById('upload-form');
     const uploadSection = document.getElementById('upload-section');
@@ -724,6 +725,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resultsSection.style.display = 'none';
         errorSection.style.display = 'none';
         pastAnalysesSection.style.display = 'none';
+        pastAnalysesSectionFail.style.display = 'none';
         modelSelectionSection.style.display = 'none';
 
         
@@ -770,7 +772,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (data.error && response.status === 404) {
                     clearInterval(pollInterval);
-                    showError('Task not found');
+                    showError('Task not found!');
                     return;
                 }
                 
@@ -838,7 +840,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    function renderModelResultOld(data) {
+    {% comment %} function renderModelResultOld(data) {
         const result = data.result;
         const uniqueId = Math.random().toString(36).substr(2, 9);
         
@@ -891,15 +893,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const score = data && typeof data.score === 'number' ? data.score : 0;
             const collapseId = `${section.key}-${uniqueId}`;
             
+            console.log(JSON.stringify(data));
+
             html += `
                 <div class="card criterion-card">
                     <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#${collapseId}" aria-expanded="true">
                         <div class="d-flex justify-content-between align-items-center">
                             <h6 class="mb-0"><i class="fas ${section.icon} mr-2"></i>${section.title}
-                            ${section.key === 'code' 
-                                ? `<a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                       <i class="fas fa-external-link-alt mr-1"></i>View Repository
-                                   </a>` 
+                            ${section.key === 'code' && data.url !== ''
+                                ? `<a href="${data.url}" target="_blank"
+                                    class="btn btn-sm btn-outline-secondary ml-2">
+                                    <i class="fas fa-external-link-alt mr-1"></i>
+                                    View Repository
+                                    </a>`
                                 : ''}</h6>
                             <div class="d-flex align-items-center">
                                 ${score === -1 
@@ -924,10 +930,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-        }
+        } 
         
         return html;
-    }
+    }{% endcomment %}
 });
 </script>
 {% endblock %}
