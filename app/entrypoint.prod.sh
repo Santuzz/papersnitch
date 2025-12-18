@@ -1,6 +1,13 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
-#python manage.py collectstatic --noinput
-#python manage.py migrate --noinput
-uv run --host 0.0.0.0 app
-python -m gunicorn --bind 0.0.0.0:8000 --workers 3 web.wsgi:application
+set -e
+
+uv run manage.py migrate
+uv run manage.py collectstatic --noinput
+uv run manage.py loaddata webApp/fixtures/*.json
+
+gunicorn web.wsgi:application \
+  --bind 0.0.0.0:8000 \
+  --workers 3 \
+  --timeout 120 \
+  --access-logfile -

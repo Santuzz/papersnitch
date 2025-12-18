@@ -5,7 +5,10 @@ import time
 
 from openai import OpenAI
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "web.settings")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    os.getenv("DJANGO_SETTINGS_MODULE", "web.settings.development"),
+)
 from web.settings import BASE_DIR
 
 # from webApp.models import Paper, Dataset, Conference

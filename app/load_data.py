@@ -11,7 +11,10 @@ from django.core.files.base import ContentFile
 import os
 from pypdf import PdfReader
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "web.settings")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    os.getenv("DJANGO_SETTINGS_MODULE", "web.settings.development"),
+)
 django.setup()
 
 from web.settings import BASE_DIR, MEDIA_ROOT

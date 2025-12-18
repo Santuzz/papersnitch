@@ -1,10 +1,8 @@
 # --- User Specific ---
-# Ignora la cartella dei dati di MySQL (come richiesto)
-mysql/
+# Ignora la cartella dei container
+mysql*/
 certbot/
 nginx/
-# Se il tuo volume si chiama in modo diverso (comune in docker-compose)
-db_data/
 
 # --- Python & Django ---
 # Bytecode e cache
@@ -13,12 +11,10 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Cartella virtual environment (Pipenv, venv)
 .venv/
 venv/
 env/
 
-# File di ambiente - NON FARE IL COMMIT DI QUESTO
 .env
 .env.*
 

@@ -152,12 +152,13 @@
       "updated_at": "2025-12-03T00:00:00Z"
     }
   },
+
   {
     "model": "webApp.llmmodelconfig",
     "pk": 10,
     "fields": {
       "model_key": "test",
-      "visual_name": "ONLY TEST",
+      "visual_name": "DO NOT USE",
       "model": "test-3-3",
       "api_key_env_var": "BYTEPLUS_API_KEY",
       "base_url": "https://ark.ap-southeast.bytepluses.com/api/v3",

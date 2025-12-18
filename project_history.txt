@@ -123,18 +123,45 @@ Creato modello per prompt
 12/12/2025
 Mergiata visuale dettagli delle analisi
 
+15/12/2025
+Eseguita separazione produzione e sviluppo (separazione container)
+switch feedback from "button" to "a"
+
+16/12/2025
+Sistemato problema nella separazione produzione/sviluppo. Creati due progetti docker
+
+17/12/2025
+Aggiunta fixture automatica
+sostituita lo storing in-memory con un modello AnalysisTask per tenere traccia delle task per le analisi
+
 
 
 TODO:
 Short term:
-    - Separazione prod/dev
-    - Rendere i risultati di ricerca dell'analisi collassabili
+   
     - Fare in modo che il risultato dell'analisi sia una richiesta get di AnalysisDetailView
-    - refinire conteggio token che si resetta ogni giorno
     - Aggiungere alert per token in esaurimento
+    - Testo estratto dal pdf con embeddings
+    CODICE
+    - ottenere il codice da fare valutare
+    - Parallelizzare valutazione codice con quella del paper (per ridurre tempistiche)
+    
+    - Ricerca: Confrontrare paper caricato con quelli nel DB (titolo ok anche per scraping)
+    - Valutazione: Ottenere testo da valutare senza LLM
+
+    - Classificazione del tipo di paper (survey, method, dataset, benchmark, ) per adattare i criteri di valutazione
+    - Gestione dei criteri da fornire all'LLM (variabili in base al tipo di paper)
 
 
 Long term:
+    - Rendere i risultati di ricerca dell'analisi collassabili
+    - Messaggi di risposta a feedback utenti
+    - Gestione feedback avanzata (schermata appropriata, avanzamento richiesta, sollecitamento, etc)
+    - Integrazione mail (notifiche analisi, feedback, etc)
+    - Modifica button New analysis (history API)
+
+    - Visualizzazione migliore dei feedback
+    - on-click method sui tasti che non permette di aprire una nuova scheda
     - Gestione permessi utente
     - Mergare output di diversi LLM
     - Chiedere mail al signup (opzionale)

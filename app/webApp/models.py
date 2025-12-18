@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 
 
 class Operations(models.Model):
@@ -508,10 +509,14 @@ class Prompt(models.Model):
         max_length=100,
         verbose_name="Prompt Name",
         help_text="Name for the prompt template",
+        blank=True,
+        null=True,
     )
     template = models.TextField(
         verbose_name="Prompt Template",
         help_text="The actual prompt template text with placeholders",
+        blank=True,
+        null=True,
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
@@ -523,3 +528,30 @@ class Prompt(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class AnalysisTask(models.Model):
+    """Stores the status of a running analysis task."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    status = models.CharField(max_length=20, default="pending")
+    progress = models.IntegerField(default=0)
+    current_step = models.CharField(max_length=255, default="Initializing...")
+    total_steps = models.IntegerField(default=0)
+    completed_steps = models.IntegerField(default=0)
+    results = models.JSONField(default=dict, blank=True)
+    error = models.TextField(blank=True, null=True)
+
+    paper = models.ForeignKey(
+        Paper, on_delete=models.CASCADE, related_name="analysis_tasks"
+    )
+    user = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    selected_models = models.JSONField(default=list)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Task {self.id} - {self.status}"

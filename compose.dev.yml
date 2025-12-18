@@ -1,0 +1,43 @@
+services:
+  django-web-dev:
+    build: ./app
+    container_name: django-web-dev
+    command: /app/entrypoint.dev.sh
+    env_file:
+      - .env.local
+    volumes:
+      - ./app:/app
+      - ./static:/app/staticfiles
+      - django-venv:/app/.venv
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql
+    environment:
+      - UV_CACHE_DIR=/tmp/uv-cache # Cache in /tmp for development
+      - PYTHONUNBUFFERED=1
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - .venv/
+
+        - action: rebuild
+          path: ./uv.lock
+
+  mysql:
+    container_name: mysql
+    image: mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql/lib:/var/lib/mysql
+      - ./mysql/.client.cnf:/root/.my.cnf
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+    env_file:
+      - .env.local
+
+volumes:
+  django-venv:

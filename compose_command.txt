@@ -1,0 +1,2 @@
+docker compose -p papersnitch-prod -f compose.prod.yml up -d --build
+docker compose -p papersnitch-dev -f compose.dev.yml up -d --build

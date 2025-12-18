@@ -7,7 +7,11 @@ from datetime import date
 from pathlib import Path
 from pypdf import PdfReader
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "web.settings")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    os.getenv("DJANGO_SETTINGS_MODULE", "web.settings.development"),
+)
+
 django.setup()
 
 from webApp.models import Paper, TokenUsage
@@ -109,7 +113,9 @@ def get_code(url: str):
         A dictionary with summary, tree, and content of the ingested code.
     """
 
-    summary, tree, content = ingest(url, include_patterns=["*.md", "docs/", "*.ipynb"])
+    summary, tree, content = ingest(
+        url, include_patterns=["*.md", "docs/", "*.ipynb", "LICENSE*", "main*"]
+    )
     return f"SUMMARY\n{summary}\nTREE\n{tree}\nCONTENT\n{content}"
 
 
