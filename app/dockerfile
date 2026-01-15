@@ -29,7 +29,7 @@ RUN chmod +x /app/entrypoint.prod.sh
 # Ensure media directory exists
 RUN mkdir -p /app/media
 
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/home/devuser/.local/bin:/app/.venv/bin:$PATH"
 ENV UV_CACHE_DIR="/home/nonroot/.cache/uv"
 
 RUN playwright install-deps && playwright install

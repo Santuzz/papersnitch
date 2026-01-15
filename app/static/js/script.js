@@ -79,6 +79,33 @@ function renderAnalysisDetails(data, is_details = true) {
     const result = data.result;
     const uniqueId = Math.random().toString(36).slice(2, 11);
 
+    // Icon mapping for known criteria - falls back to generic icon
+    const criterionIcons = {
+        'code': 'fa-code',
+        'annotation': 'fa-tags',
+        'preprocessing': 'fa-cogs',
+        'evaluation': 'fa-chart-bar',
+        'licensing': 'fa-balance-scale',
+        'datasets': 'fa-database',
+        'reproducibility': 'fa-redo',
+        'methodology': 'fa-flask',
+        'documentation': 'fa-book',
+        'data_availability': 'fa-folder-open',
+        'statistical_analysis': 'fa-calculator'
+    };
+
+    // Helper function to format criterion key to title
+    function formatCriterionTitle(key) {
+        return key
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, char => char.toUpperCase());
+    }
+
+    // Helper function to get icon for criterion
+    function getCriterionIcon(key) {
+        return criterionIcons[key] || 'fa-clipboard-check';
+    }
+
     let html_start = `
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-start">
@@ -136,72 +163,78 @@ function renderAnalysisDetails(data, is_details = true) {
         }
     }
 
-    // Datasets section
-    html += `
-            <div class="card criterion-card">
-                <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#datasets-${uniqueId}" aria-expanded="true">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="fas fa-database mr-2"></i>Datasets</h6>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </div>
-                </div>
-                <div id="datasets-${uniqueId}" class="collapse show">
-                    <div class="card-body">
-                        ${result.datasets && result.datasets.extracted && result.datasets.extracted.length > 0
-            ? `<ul class="dataset-list mb-0">${result.datasets.extracted.map(d => `<li>${d}</li>`).join('')}</ul>`
-            : '<p class="text-muted mb-0">No datasets identified</p>'}
-                    </div>
-                </div>
-            </div>
-        `;
+    // Dynamically iterate over all criteria in the result
+    for (const [criterionKey, criterionData] of Object.entries(result)) {
+        // Skip if criterionData is not an object or doesn't have expected structure
+        if (!criterionData || typeof criterionData !== 'object') {
+            continue;
+        }
 
-    // Scored sections
-    const scoredSections = [
-        { key: 'code', icon: 'fa-code', title: 'Code Repository' },
-        { key: 'annotation', icon: 'fa-tags', title: 'Annotation' },
-        { key: 'preprocessing', icon: 'fa-cogs', title: 'Preprocessing' },
-        { key: 'evaluation', icon: 'fa-chart-bar', title: 'Evaluation' },
-        { key: 'licensing', icon: 'fa-balance-scale', title: 'Licensing' }
-    ];
+        const icon = getCriterionIcon(criterionKey);
+        const title = formatCriterionTitle(criterionKey);
+        const score = typeof criterionData.score === 'number' ? criterionData.score : null;
+        const collapseId = `${criterionKey}-${uniqueId}`;
 
-    for (const section of scoredSections) {
-        const data = result[section.key];
-        const score = data && typeof data.score === 'number' ? data.score : 0;
-        const collapseId = `${section.key}-${uniqueId}`;
-
-        html += `
+        // Handle datasets specially if it has an 'extracted' array
+        if (criterionKey === 'datasets' && Array.isArray(criterionData.extracted)) {
+            html += `
                 <div class="card criterion-card">
                     <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#${collapseId}" aria-expanded="true">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="fas ${section.icon} mr-2"></i>${section.title}
-                            ${section.key === 'code' && data.url !== ''
-                ? `<a href="${data.url}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                       <i class="fas fa-external-link-alt mr-1"></i>View Repository
-                                   </a>`
-                : ''}</h6>
-                            <div class="d-flex align-items-center">
-                                ${score === -1
-                ? `<span class="score-badge score-${score} mr-2">n/a</span>`
-                : `<span class="score-badge score-${score} mr-2">${score}</span>`}
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
+                            <h6 class="mb-0"><i class="fas ${icon} mr-2"></i>${title}</h6>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                     </div>
                     <div id="${collapseId}" class="collapse show">
                         <div class="card-body">
-                            ${data && data.extracted
-                ? `
-                                    <h6 class="text-muted">Extracted Information:</h6>
-                                    <div class="extracted-text">${data.extracted}</div>
-                                    ${data.score_explanation
-                    ? `<h6 class="text-muted mt-3">Score Explanation:</h6><p class="mb-0">${data.score_explanation}</p>`
-                    : ''}
-                                  `
-                : '<p class="text-muted mb-0">No information extracted for this criterion</p>'}
+                            ${criterionData.extracted.length > 0
+                    ? `<ul class="dataset-list mb-0">${criterionData.extracted.map(d => `<li>${d}</li>`).join('')}</ul>`
+                    : '<p class="text-muted mb-0">No datasets identified</p>'}
                         </div>
                     </div>
                 </div>
             `;
+            continue;
+        }
+
+        // Render scored criterion section
+        html += `
+            <div class="card criterion-card">
+                <div class="card-header bg-light collapsible" data-toggle="collapse" data-target="#${collapseId}" aria-expanded="true">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas ${icon} mr-2"></i>${title}
+                            ${criterionKey === 'code' && criterionData.url
+                ? `<a href="${criterionData.url}" target="_blank" class="btn btn-sm btn-outline-secondary ml-2">
+                                       <i class="fas fa-external-link-alt mr-1"></i>View Repository
+                                   </a>`
+                : ''}
+                        </h6>
+                        <div class="d-flex align-items-center">
+                            ${score !== null
+                ? (score === -1
+                    ? `<span class="score-badge score-${score} mr-2">n/a</span>`
+                    : `<span class="score-badge score-${score} mr-2">${score}</span>`)
+                : ''}
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div id="${collapseId}" class="collapse show">
+                    <div class="card-body">
+                        ${criterionData.extracted
+                ? `
+                                <h6 class="text-muted">Extracted Information:</h6>
+                                <div class="extracted-text">${criterionData.extracted}</div>
+                                ${criterionData.score_explanation
+                    ? `<h6 class="text-muted mt-3">Score Explanation:</h6><p class="mb-0">${criterionData.score_explanation}</p>`
+                    : ''}
+                              `
+                : '<p class="text-muted mb-0">No information extracted for this criterion</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     return html;

@@ -112,4 +112,11 @@ dependencies = [
     "zipp==3.23.0 ; python_full_version >= '3.9'",
     "gitingest>=0.3.1",
     "openai>=2.7.2",
+    "beautifulsoup4>=4.14.2",
+    "lxml>=5.4.0",
+    "celery>=5.6.2",
+    "redis>=7.1.0",
+    "langchain>=1.2.3",
+    "langchain-openai>=1.1.7",
+    "watchfiles>=1.1.1",
 ]

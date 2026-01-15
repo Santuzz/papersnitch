@@ -51,6 +51,9 @@
             <li class="nav-item">
                 <a class="nav-link" href="{% url 'profile' %}" style="color: white;" title="Profile">
                     <i class="fas fa-user fa-lg"></i>
+                    {% if unread_analyses_count > 0 %}
+                        <span class="badge badge-danger">{{ unread_analyses_count }}</span>
+                    {% endif %}
                 </a>
             </li>
             

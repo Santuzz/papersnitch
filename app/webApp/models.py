@@ -218,7 +218,7 @@ class Analysis(models.Model):
         Calculates the weighted average score of the analysis based on criteria weights.
         Criteria with negative scores are ignored.
         """
-        total_weighted_score = 0
+        weighted_score = 0
         total_weight = 0
 
         criteria_results = self.criteria_results.select_related("criterion").all()
@@ -227,14 +227,11 @@ class Analysis(models.Model):
             score = result.score
             weight = result.criterion.weight
 
-            if score is not None and score >= 0 and weight is not None and weight > 0:
-                total_weighted_score += score * weight
+            if score is not None and score >= 0 and weight > 0:
+                weighted_score += score * weight
                 total_weight += weight
 
-        if total_weight == 0:
-            return 0
-
-        return int(total_weighted_score / total_weight)
+        return int(weighted_score / total_weight)
 
     def __str__(self):
         return f"{self.paper.title} - {self.model_name}"
@@ -261,7 +258,7 @@ class AnalysisCriterion(models.Model):
     score_explanation = models.TextField(
         verbose_name="Score Explanation", blank=True, null=True
     )
-    score = models.IntegerField(verbose_name="Score (0-5)", blank=True, null=True)
+    score = models.IntegerField(verbose_name="Score", blank=True, null=True)
 
     class Meta:
         verbose_name = "Analysis Criterion Result"
@@ -541,6 +538,7 @@ class AnalysisTask(models.Model):
     completed_steps = models.IntegerField(default=0)
     results = models.JSONField(default=dict, blank=True)
     error = models.TextField(blank=True, null=True)
+    is_read = models.BooleanField(default=False)
 
     paper = models.ForeignKey(
         Paper, on_delete=models.CASCADE, related_name="analysis_tasks"

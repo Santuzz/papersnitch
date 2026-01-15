@@ -1,7 +1,6 @@
 from gitingest import ingest
 
 import django
-from django.core.files.base import ContentFile
 import os
 from datetime import date
 from pathlib import Path
@@ -15,6 +14,8 @@ os.environ.setdefault(
 django.setup()
 
 from webApp.models import Paper, TokenUsage
+from bs4 import BeautifulSoup
+import requests
 
 
 def update_token(tokens_used: int, token_var: str) -> int:
@@ -134,35 +135,143 @@ def read_pdf(pdf_path: Path) -> str:
     return text
 
 
-def upload_pdf(pdf_file):
-    """Upload a PDF file in the DB
-    pdf_file comes from request.FILES["pdf_file"]"""
+def get_pdf_content(pdf_path):
+    """
+    Extract clean title and text from a PDF using Grobid and BeautifulSoup.
+    Args:
+        pdf_path: Path to the PDF file.
+    Returns:
+        A tuple containing the title and cleaned text."""
+    # Use host.docker.internal to reach GROBID running on host from Docker container
+    base_url = os.environ.get("GROBID_URL", "http://grobid:8070")
+    grobid_url = f"{base_url}/api/processFulltextDocument"
+    params = {"consolidateHeader": "0", "consolidateCitations": "0"}
 
-    # Read first bytes to check if it's a valid PDF
-    first_bytes = pdf_file.read(4)
-    pdf_file.seek(0)  # Reset file pointer
+    try:
+        with open(pdf_path, "rb") as pdf_file:
+            files = {"input": ("paper.pdf", pdf_file, "application/pdf")}
+            response = requests.post(grobid_url, files=files, data=params, timeout=60)
 
-    if not first_bytes.startswith(b"%PDF"):
-        print(f"Downloaded file is not a valid PDF")
-        return None
+        if response.status_code != 200:
+            print(f"Error Grobid: {response.status_code}")
+            return None, None
 
-    text = get_text(pdf_file)
-    # take the first line of the text as the paper title
-    name = text.split("\n")[0]
+        xml_content = response.text
 
-    # get the paper from db using name
-    existing_paper = Paper.objects.filter(title=name).first()
+    except Exception as e:
+        print(f"Error: {e}")
+        return None, None
 
-    if existing_paper:
-        return existing_paper
+    # 2. BeautifulSoup parsing
+    soup = BeautifulSoup(xml_content, "xml")
 
-    # Extract text from the PDF
-    pdf_file.seek(0)  # Reset file pointer for saving
+    # Title extraction
+    title_tag = soup.find("title", level="a") or soup.find("title", type="main")
+    # Title Fallback
+    if not title_tag:
+        title_tag = soup.find("title")
 
-    # Read file content for storage
-    pdf_content = pdf_file.read()
-    pdf_content = ContentFile(pdf_content, name=name + ".pdf")
+    title = title_tag.get_text(strip=True) if title_tag else "Title not Found"
 
-    paper = Paper.objects.create(title=name, file=pdf_content, text=text)
+    # Abstract extraction
+    abstract_tag = soup.find("abstract")
+    abstract_text = ""
+    if abstract_tag:
+        # Get all paragraph text from abstract
+        abstract_paragraphs = abstract_tag.find_all("p")
+        if abstract_paragraphs:
+            abstract_text = "\n\n".join(
+                p.get_text(strip=True) for p in abstract_paragraphs
+            )
+        else:
+            abstract_text = abstract_tag.get_text(strip=True)
 
-    return paper
+    # Text extraction
+
+    body = soup.find("body")
+
+    text_content = []
+
+    # Add abstract at the beginning
+    if abstract_text:
+        text_content.append("Abstract\n\n" + abstract_text)
+
+    if body:
+        # find all paragraph (<p>), section title (<head>), figures and tables
+        for tag in body.find_all(["head", "p", "figure"]):
+            # Skip head tags that are inside figures (they're handled with the figure)
+            if tag.name == "head" and tag.find_parent("figure"):
+                continue
+
+            # Remove bibliographic references
+            for ref in tag.find_all("ref", type="bibr"):
+                ref.decompose()
+
+            # For figures, extract the caption/description
+            if tag.name == "figure":
+                fig_head = tag.find("head")
+                fig_desc = tag.find("figDesc")
+                table = tag.find("table")
+
+                fig_text_parts = []
+
+                # Add label (e.g., "Table 1" or "Fig. 1")
+
+                if fig_head and table:
+                    fig_text_parts.append(fig_head.get_text(strip=True))
+
+                if fig_desc:
+                    fig_text_parts.append(fig_desc.get_text(strip=True))
+
+                # Extract table content with structure
+                if table:
+                    table_rows = []
+                    for row in table.find_all("row"):
+                        cells = [
+                            cell.get_text(strip=True) for cell in row.find_all("cell")
+                        ]
+                        table_rows.append(" | ".join(cells))
+                    if table_rows:
+                        fig_text_parts.append("\n".join(table_rows))
+
+                if fig_text_parts:
+                    text_content.append(" ".join(fig_text_parts))
+            else:
+                text_content.append(tag.get_text(strip=True))
+
+    # concatenate all text parts
+    text = "\n\n".join(text_content)
+
+    return title, text
+
+
+# def upload_pdf(pdf_file):
+#     """Upload a PDF file in the DB
+#     pdf_file comes from request.FILES["pdf_file"]"""
+
+#     # Read first bytes to check if it's a valid PDF
+#     first_bytes = pdf_file.read(4)
+#     pdf_file.seek(0)  # Reset file pointer
+
+#     if not first_bytes.startswith(b"%PDF"):
+#         print(f"Downloaded file is not a valid PDF")
+#         return None
+
+#     title, text = get_pdf_content(pdf_file)
+
+#     # get the paper from db using name
+#     existing_paper = Paper.objects.filter(title=title).first()
+
+#     if existing_paper:
+#         return existing_paper
+
+#     # Extract text from the PDF
+#     pdf_file.seek(0)  # Reset file pointer for saving
+
+#     # Read file content for storage
+#     pdf_content = pdf_file.read()
+#     pdf_content = ContentFile(pdf_content, name=title + ".pdf")
+
+#     paper = Paper.objects.create(title=title, file=pdf_content, text=text)
+
+#     return paper

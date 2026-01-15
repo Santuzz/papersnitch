@@ -1,2 +1,3 @@
 docker compose -p papersnitch-prod -f compose.prod.yml up -d --build
 docker compose -p papersnitch-dev -f compose.dev.yml up -d --build
+docker run --rm --init --ulimit core=0 -p 8070:8070 grobid/grobid:0.8.2-crf

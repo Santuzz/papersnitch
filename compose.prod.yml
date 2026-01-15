@@ -9,6 +9,8 @@ services:
       - ./static:/app/staticfiles
     depends_on:
       - mysql
+      - redis
+      - grobid
     restart: unless-stopped
 
   mysql:
@@ -20,7 +22,6 @@ services:
       - ./mysql_prod/lib:/var/lib/mysql
       - ./mysql_prod/my.cnf:/etc/mysql/my.cnf
     restart: unless-stopped
-
     ports: []
 
   nginx:
@@ -53,3 +54,37 @@ services:
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-prod
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  celery-worker:
+    build: ./app
+    container_name: celery-worker-prod
+    command: celery -A web worker --loglevel=info
+    env_file:
+      - .env.prod
+    volumes:
+      - ./static:/app/staticfiles
+    depends_on:
+      - mysql
+      - redis
+      - grobid
+    restart: unless-stopped
+
+  grobid:
+    image: grobid/grobid:0.8.2-crf
+    container_name: grobid-prod
+    init: true
+    expose:
+      - "8070"
+    ulimits:
+      core: 0
+    restart: unless-stopped
+
+volumes:
+  redis_data:

@@ -5,6 +5,8 @@ services:
     command: /app/entrypoint.dev.sh
     env_file:
       - .env.local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./app:/app
       - ./static:/app/staticfiles
@@ -13,6 +15,7 @@ services:
       - "8000:8000"
     depends_on:
       - mysql
+      - redis
     environment:
       - UV_CACHE_DIR=/tmp/uv-cache # Cache in /tmp for development
       - PYTHONUNBUFFERED=1
@@ -39,5 +42,42 @@ services:
     env_file:
       - .env.local
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-dev:/data
+
+  celery-worker:
+    build: ./app
+    container_name: celery-worker-dev
+    command: watchfiles "celery -A web worker --loglevel=info"
+    env_file:
+      - .env.local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./app:/app
+      - django-venv:/app/.venv
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      - UV_CACHE_DIR=/tmp/uv-cache
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  grobid:
+    image: grobid/grobid:0.8.2-crf
+    container_name: grobid
+    init: true
+    ports:
+      - "8070:8070"
+    ulimits:
+      core: 0
+    restart: unless-stopped
 volumes:
   django-venv:
+  redis-data-dev:

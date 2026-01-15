@@ -134,10 +134,46 @@ Sistemato problema nella separazione produzione/sviluppo. Creati due progetti do
 Aggiunta fixture automatica
 sostituita lo storing in-memory con un modello AnalysisTask per tenere traccia delle task per le analisi
 
+18/12/2025 
+Creato excel per gestione prompt
+Guardato tool per estrarre titolo dal pdf (GROBID e science-parse)
+Guardato modelli per classificazione paper
+Iniziato a provare ad uploadare i pdf a gpt
+
+22/12/2025
+implementato grobid per estrazione testo + titolo dal pdf
+
+23/12/2025
+Finita implementazione di grobid
+Fornire PDF a GPT non permette di ottenere il testo estratto. Come capire se basa il suo score in modo giusto?
+
+12/01/2026
+Iniziato a guardare celery per task asincrone per la gestione delle analisi e il web crawling (crawl itself e per la queue di analisi di molti paper trovati duranti il crawling)
+
+13/01/2026
+Implementata struttura base celery + redis per task asincrone (only dev)
+Aggiunto spinner nei log di analisi
+
+14/01/2026
+Splittate le chiamate all'LLM per ogni criterio. Non vengono però visualizzate correttamente, controllare come JS gestisce la risposta
+
+15/01/2026
+Corretta la visualizzazione dei risultati delle analisi dopo lo split per criterio
+Effettuata modifca per le chiamate in parallelo. Manca la parallelizzazione in caso multipli modelli vengono chiamati.
+Creato docker per celery, redis e grobid in production
+
 
 
 TODO:
 Short term:
+- implementare la chat di gemini relativa a celery+redis per l'analisi in background dei paper.
+- Integrare Grobid su docker compose
+- Analizza codice
+- Fornire pdf
+- Sistemare visualizzazione risultato analisi (in seguito a modifica) probabile errore JS (script.js)
+- Parallelizzare chiamate LLM per criterio
+- Capire perchè devo sempre restartare docker celery ad ogni modifica del codice
+
    
     - Fare in modo che il risultato dell'analisi sia una richiesta get di AnalysisDetailView
     - Aggiungere alert per token in esaurimento
@@ -146,14 +182,20 @@ Short term:
     - ottenere il codice da fare valutare
     - Parallelizzare valutazione codice con quella del paper (per ridurre tempistiche)
     
+
     - Ricerca: Confrontrare paper caricato con quelli nel DB (titolo ok anche per scraping)
     - Valutazione: Ottenere testo da valutare senza LLM
-
+    PAPER ELABORATION
     - Classificazione del tipo di paper (survey, method, dataset, benchmark, ) per adattare i criteri di valutazione
     - Gestione dei criteri da fornire all'LLM (variabili in base al tipo di paper)
+    - Guardare GROBID e Science-parse per ottenere titolo
+    - Cercare modello di classificazione di paper (survey, method, dataset, benchmark) Qwen/Qwen2.5-0.5B-Instruct oppure meta-llama/Llama-3.2-1B-Instruct
 
 
 Long term:
+    - Splittare l'analisi con più chiamate ad LLM, ognuna per ogni criterio
+    - Integrare celery + redis per crawling in background
+    - Aggiungere badge per indicare nell'icona del profilo una nuova analisi completata non letta
     - Rendere i risultati di ricerca dell'analisi collassabili
     - Messaggi di risposta a feedback utenti
     - Gestione feedback avanzata (schermata appropriata, avanzamento richiesta, sollecitamento, etc)
@@ -247,3 +289,11 @@ A link alone isn’t enough for a solid code evaluation, since the repository ma
 Paper caricato -> controllo se esiste già (titolo) -> controllo se c'è già il codice (code_text) -> [si] Mostro analisi -> chiedo nuova analisi -> abilito modelli -> chiedo conferma per sovrascrittura analisi 
                                                                                                  -> [No] Abilito code_tool x gpt -> Abilito modelli
 
+
+CELERY:
+• Asynchronous Task Execution
+• Distributed Task Queue
+• Task Scheduling and Periodic Tasks
+• Result Handling
+• Error Handling and Retry Mechanism
+• Monitoring and Management

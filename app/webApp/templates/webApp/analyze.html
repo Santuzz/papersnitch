@@ -371,44 +371,55 @@ document.addEventListener('DOMContentLoaded', function() {
     let pollInterval = null;
     let lastStep = '';
     let startTime = null;
+    let title = null;
+
     
     // Function to add a log line to the terminal
     function addLogLine(message, type = 'info') {
-        const line = document.createElement('div');
-        line.className = 'terminal-line';
-        
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
-        
-        let icon = '';
-        let textClass = 'terminal-info';
-        
-        switch(type) {
-            case 'success':
-                icon = '✓';
-                textClass = 'terminal-success';
-                break;
-            case 'error':
-                icon = '✗';
-                textClass = 'terminal-error';
-                break;
-            case 'warning':
-                icon = '⚠';
-                textClass = 'terminal-warning';
-                break;
-            case 'spinner':
-                icon = '●';
-                textClass = 'terminal-info';
-                break;
-            default:
-                icon = '→';
-                textClass = 'terminal-info';
-        }
-        
-        line.innerHTML = `<span class="terminal-time">[${timeStr}]</span> <span class="terminal-prompt">${icon}</span> <span class="${textClass}">${message}</span>`;
-        terminalLog.appendChild(line);
-        terminalLog.scrollTop = terminalLog.scrollHeight;
+    // 1. Rimuove lo spinner da tutte le righe precedenti
+    const activeSpinners = terminalLog.querySelectorAll('.fa-spinner');
+    activeSpinners.forEach(s => s.remove());
+
+    const line = document.createElement('div');
+    line.className = 'terminal-line';
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+    
+    let icon = '';
+    let textClass = 'terminal-info';
+    
+    switch(type) {
+        case 'success':
+            icon = '✓';
+            textClass = 'terminal-success';
+            break;
+        case 'error':
+            icon = '✗';
+            textClass = 'terminal-error';
+            break;
+        case 'warning':
+            icon = '⚠';
+            textClass = 'terminal-warning';
+            break;
+        case 'spinner':
+            icon = '●';
+            textClass = 'terminal-info';
+            break;
+        default:
+            icon = '→';
+            textClass = 'terminal-info';
     }
+    
+    // 2. Aggiungiamo lo spinner solo se il tipo è 'spinner'
+    // Lo mettiamo alla fine del messaggio per pulizia visiva
+    const spinnerHtml = (type === 'spinner') ? ' <i class="fas fa-spinner fa-spin ml-2"></i>' : '';
+    
+    line.innerHTML = `<span class="terminal-time">[${timeStr}]</span> <span class="terminal-prompt">${icon}</span> <span class="${textClass}">${spinnerHtml} ${message}</span>`;
+    
+    terminalLog.appendChild(line);
+    terminalLog.scrollTop = terminalLog.scrollHeight;
+}
     
     // Clear file input on page load to prevent browser restore
     const pdfFileInput = document.getElementById('pdf-file');
@@ -494,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Show model selection section
             modelSelectionSection.style.display = 'block';
-            
+            title = data.title;
             if (data.has_past_analyses) {
                 // Show past analyses
                 paperTitleSpan.textContent = data.title;
@@ -625,7 +636,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Create a new FormData with the uploaded PDF file
         const formData = new FormData();
-        formData.append('pdf_file', uploadedPdfFile);
+        // formData.append('pdf_file', uploadedPdfFile);
+
+        // Add title if available
+        if (title) {
+            formData.append('title', title);
+        }
         
         // Add selected models
         const selectedModels = document.querySelectorAll('.model-checkbox:checked');
