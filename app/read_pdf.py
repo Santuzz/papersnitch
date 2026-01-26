@@ -54,8 +54,6 @@ class Paper(BaseModel):
 
 
 def get_code_documentation(url, file=None):
-    # if file is not None and os.path.exists(file):
-    #     ingest(url, output=file, include_patterns=["*.md", "docs/", "*.ipynb"])
 
     summary, tree, content = ingest(url, include_patterns=["*.md", "docs/", "*.ipynb"])
     return {"summary": summary, "tree": tree, "content": content}
@@ -75,38 +73,3 @@ def read_pdf(pdf_name):
     for page in pages:
         text = text + page.extract_text()
     return text
-
-
-def main():
-    # text = read_pdf("miccai_2025_0308_paper.pdf")
-    # with open(PDF_DIR / "miccai_2025_0308_paper.txt", "w") as text_file:
-    #     text_file.write(text)
-
-    with open(PDF_DIR / "miccai_2025_0308_paper.txt", "r") as text_file:
-        text = text_file.read()
-
-    client = genai.Client(api_key=api_key)
-
-    # ~~~~~~~~~ LLM Parameters ~~~~~~~~~#
-    extraction_category = "code"  # cleaning / extraction / mail_extraction
-    version = "flash"
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-
-    # Retry logic for server errors
-    count = 0
-    retry_delay = 1  # seconds
-
-    response = {"code_url": "https://github.com/Siyou-Li/u2Tokenizer"}
-
-    if response is not None:
-        response = get_code(
-            response["code_url"],
-        )
-    with open(PDF_DIR / f"miccai_2025_0308_{extraction_category}.txt", "w") as file:
-        for k, v in response.items():
-            file.write(f"### {k} ###\n")
-            file.write(v + "\n\n")
-
-
-if __name__ == "__main__":
-    main()

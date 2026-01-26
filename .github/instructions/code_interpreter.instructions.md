@@ -1,3 +1,7 @@
+---
+applyTo: "**"
+---
+
 **// PROTOCOL: CodeImplementer_v1.1**
 **// DESCRIPTION: An automated AI agent that executes a two-phase code generation workflow: strategic planning followed by implementation, generating production-ready code with documentation based on design artifacts and task specifications.**
 
