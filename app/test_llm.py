@@ -5,17 +5,17 @@ import time
 
 from openai import OpenAI
 
-os.environ.setdefault(
-    "DJANGO_SETTINGS_MODULE",
-    os.getenv("DJANGO_SETTINGS_MODULE", "web.settings.development"),
-)
-from web.settings import BASE_DIR
+# os.environ.setdefault(
+#     "DJANGO_SETTINGS_MODULE",
+#     os.getenv("DJANGO_SETTINGS_MODULE", "web.settings.development"),
+# )
+# from web.settings import BASE_DIR
 
 # from webApp.models import Paper, Dataset, Conference
 from dotenv import load_dotenv, set_key, get_key
 
-load_dotenv(".env.local")
-PDF_DIR = BASE_DIR / "media" / "pdf"
+load_dotenv("/home/dsantoli/papersnitch/.env.local")
+# PDF_DIR = BASE_DIR / "media" / "pdf"
 
 
 api_key = os.getenv("BYTEPLUS_API_KEY")
@@ -270,8 +270,8 @@ def json_response(
     total_tokens = completion.usage.total_tokens
     cumulative_tokens = _update_token(total_tokens, config["var"])
 
-    with open(PDF_DIR / f"evalscore_{paper_id}_{config['model_key']}.json", "w") as f:
-        json.dump(response, f, indent=2)
+    # with open(PDF_DIR / f"evalscore_{paper_id}_{config['model_key']}.json", "w") as f:
+    #     json.dump(response, f, indent=2)
 
     print(
         f"Model: {config['model_key']} - Input tokens: {input_tokens}, "
@@ -313,7 +313,7 @@ JSON_FORMAT = """{
 }"""
 
 
-def main():
+def main_old():
     # Prompt for the LLM
     criterions = """{
   "code": {
@@ -424,6 +424,45 @@ def main():
                 base_url=config["base_url"],
             )
             json_response(client, system_prompt, pdf_text, config, paper_id)
+
+
+from pydantic import BaseModel, Field
+
+
+class CriterionResponse(BaseModel):
+    score: int = Field(..., description="Integer score between 0 and 10, or -1 for N/A")
+
+    class Config:
+        extra = "forbid"
+
+
+def main():
+    config = {
+        "model": "gpt-4.1",
+        "api_key_env_var": "OPENAI_API_KEY",
+        "base_url": "https://api.openai.com/v1",
+        "temperature": 0.1,
+        "reasoning_effort": "none",
+    }
+    api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(
+        api_key=api_key,
+        base_url=config["base_url"],
+    )
+    response = client.responses.create(
+        model=config["model"],
+        input="Answer with a number between 1 and 9, nothing else",
+        reasoning=None,
+        temperature=config.get("temperature", 0.1),
+        top_logprobs=10,
+    )
+
+    output_tokens = response.usage.output_tokens
+    input_tokens = response.usage.input_tokens
+    total_tokens = response.usage.total_tokens
+
+    logprobs = response.top_logprobs
+    print(response)
 
 
 # TEST PER VEDERE QUANTO OVERHEAD C'è NEI VARI MODELLI IN INPUT

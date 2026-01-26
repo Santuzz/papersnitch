@@ -6,8 +6,9 @@ from .services.llm_analysis import (
     llm_analysis,
     pdf_analysis,
     _save_analysis_to_db,
-    get_code,
 )
+
+from webApp.functions import analyze_code
 from openai import OpenAI
 import re
 import logging
@@ -36,9 +37,13 @@ def run_analysis_celery_task(self, task_id):
         total_steps = task.total_steps
         completed_steps = task.completed_steps
 
-        # Get paper and its text
+        # Get paper and its PDF file path or the text (based on the function we want to use)
         paper = Paper.objects.get(id=paper_id)
         pdf_text = paper.text
+        pdf_path = paper.file.path if paper.file else None
+
+        if not pdf_path:
+            raise ValueError(f"Paper {paper_id} does not have a PDF file attached")
 
         # Helper to update DB progress so your JS polling still works
         def _update_progress(step, increment=True):
@@ -64,12 +69,13 @@ def run_analysis_celery_task(self, task_id):
 
         # all_criterions = Criterion.objects.all().order_by("id")
         # TEST TODO REMOVE IT
-        all_criterions = Criterion.objects.filter(
-            key__in=["preprocessing", "code"]
-        ).order_by("id")
+        all_criterions = Criterion.objects.filter(key__in=["evaluation"]).order_by("id")
 
         total_models = len(selected_models)
         total_criterions = all_criterions.count()
+
+        # if paper.code_url == "" or paper.code_url is None:
+        #     code_result = analyze_code(paper.code_url)
 
         results = {}
 
@@ -111,7 +117,10 @@ def run_analysis_celery_task(self, task_id):
                         f"Code not ingested, starting ingestion process...",
                         increment=False,
                     )
-                    code_text = get_code(paper.code_url)
+                    analysis_result = analyze_code(paper.code_url)
+                    code_text = analysis_result["content"]
+                    code_errors = analysis_result["code_errors"]
+                    print(f"Code ingestion errors: {code_errors}")
                     paper.code_text = code_text
                     paper.save(update_fields=["code_text", "code_url"])
                     config["code_tool"] = False
@@ -143,16 +152,48 @@ def run_analysis_celery_task(self, task_id):
             def process_single_criterion(crit, crit_idx):
                 """
                 Helper function to run inside a thread.
-                Captures outer scope variables (client, pdf_text, code_text, etc.)
+                Captures outer scope variables (client, pdf_path or pdf_text, code_text, etc.)
                 """
                 # Format prompt
                 formatted_prompt = system_prompt.format(
                     criterion_name=crit.name, criterion_description=crit.description
                 )
 
+                if crit == "code":
+
+                    input_list = [
+                        {
+                            "role": "system",
+                            "content": formatted_prompt,
+                        },
+                        {
+                            "role": "user",
+                            "content": f"CODE REPOSITORY:\n{code_text or 'Not provided'}",
+                        },
+                    ]
+                else:
+                    input_list = [
+                        {
+                            "role": "system",
+                            "content": formatted_prompt,
+                        },
+                        {
+                            "role": "user",
+                            "content": f"PAPER TEXT:\n{pdf_text}",
+                        },
+                    ]
+
+                # response = llm_analysis(
+                #     client, prompt, config, code_text=code_text
+                # )
+
                 # Call LLM
+                # TODO switch between llm_analysis and pdf_analysis based on if we want to use text or pdf
+                # response = llm_analysis(
+                #     client, formatted_prompt, pdf_text, config, code_text=code_text
+                # )
                 response = pdf_analysis(
-                    client, formatted_prompt, pdf_text, config, code_text=code_text
+                    client, formatted_prompt, pdf_path, config, code_text=code_text
                 )
 
                 # Process result
@@ -209,11 +250,12 @@ def run_analysis_celery_task(self, task_id):
 
             # 5. Prepare final structure for database compatibility
             # _save_analysis_to_db expects the criteria as top-level keys in result['result']
+
             duration = round(time.perf_counter() - iteration_start, 2)
             final_model_payload = {
                 "model": config.get("visual_name", config["model_key"]),
-                "result": model_aggregated_result,  # This is now the collection of all criteria
-                "input_tokens": sum_input_tokens,  # Optional: You may want to sum tokens across all calls
+                "result": model_aggregated_result,
+                "input_tokens": sum_input_tokens,
                 "output_tokens": sum_output_tokens,
                 "duration": duration,
             }

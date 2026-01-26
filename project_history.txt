@@ -162,22 +162,33 @@ Corretta la visualizzazione dei risultati delle analisi dopo lo split per criter
 Effettuata modifca per le chiamate in parallelo. Manca la parallelizzazione in caso multipli modelli vengono chiamati.
 Creato docker per celery, redis e grobid in production
 
+19/01/2026
+Aggiornato prompt seguendo consigli di LLM-as-a-judge and GEval
+
+21/12/2026
+Iniziato a valutare di utilizzare kimi k2. Con turbo l'output è veramente veloce (60-100 token al secondo), costa meno di GPT (8$ vs 10$ 1M token in output), è possibile generare i logprobs.
+Occorre testare sia il preview che il turbo e confrontarli con GPT5.1/GPT5.2
+Occorre testare anche il reasoning di KIMI k2
+
+22/01/2026
+Manca solo implementazione su server di KIMI K2. Niente reasoning perchè non ha i logprobs. Le valutazioni sembrano simili a GPT
+
+23/01/2026
+Terminare compilazione grafo e capire come gestire evidence locator
 
 
 TODO:
 Short term:
-- implementare la chat di gemini relativa a celery+redis per l'analisi in background dei paper.
-- Integrare Grobid su docker compose
-- Analizza codice
-- Fornire pdf
-- Sistemare visualizzazione risultato analisi (in seguito a modifica) probabile errore JS (script.js)
-- Parallelizzare chiamate LLM per criterio
-- Capire perchè devo sempre restartare docker celery ad ogni modifica del codice
+- Creazione grafo chiamate LLM seguendo linee guida miccai (https://conferences.miccai.org/2026/en/PAPER-SUBMISSION-GUIDELINES.html#reproducibleresearch)
+- Aggiustare lentezza grobid nell'estrarre testo dal paper 
+- Analisi statica del codice (per vedere se non ci sono errori di sintassi trovabili senza LLM, esistono tool per fare ciò) - troppi errori inutili trovati da ruff e company, aggiustare da impostazioni (https://docs.astral.sh/ruff/linter/#rule-selection)
+- combinazione risultato multimodello
+- Trovare un modo per analizzare il codice (max 400k context)
+- Notifica quando l'analisi è conclusa
 
+- Spostare fuori da llm_analysis (in run_celery_analysis_tasks) la creazione dell'user prompt in modo che sia differente sulla base del criterio (es. codice solo per code documentation)
    
     - Fare in modo che il risultato dell'analisi sia una richiesta get di AnalysisDetailView
-    - Aggiungere alert per token in esaurimento
-    - Testo estratto dal pdf con embeddings
     CODICE
     - ottenere il codice da fare valutare
     - Parallelizzare valutazione codice con quella del paper (per ridurre tempistiche)
@@ -193,7 +204,7 @@ Short term:
 
 
 Long term:
-    - Splittare l'analisi con più chiamate ad LLM, ognuna per ogni criterio
+
     - Integrare celery + redis per crawling in background
     - Aggiungere badge per indicare nell'icona del profilo una nuova analisi completata non letta
     - Rendere i risultati di ricerca dell'analisi collassabili
@@ -203,7 +214,6 @@ Long term:
     - Modifica button New analysis (history API)
 
     - Visualizzazione migliore dei feedback
-    - on-click method sui tasti che non permette di aprire una nuova scheda
     - Gestione permessi utente
     - Mergare output di diversi LLM
     - Chiedere mail al signup (opzionale)
@@ -211,9 +221,7 @@ Long term:
     
     - Controllare cosa è fattibile valutare senza LLM e con LLM
     - Parallelizzare la lettura dei pdf
-    - GPT sembra il migliore nel rispondere, valutare la risposta per vedere se è così. Valutare anche che differenza c'è con la versione mini.
     - Valutare i modelli lanciando le chiamate su 5 paper
-    - Dall'output degli LLM prendere il codice e confrontarlo con quello che c'è nel db, se presente
     
     - creare gruppi di utenti con diversi limiti di token (check_token_limit in functions.py)
     
@@ -297,3 +305,191 @@ CELERY:
 • Result Handling
 • Error Handling and Retry Mechanism
 • Monitoring and Management
+
+
+
+
+reproducibility_mapping = {
+    # Models and Algorithms
+    "mathematical_setting": ["objective_function", "loss_equations", "optimization_space", "variables_definition"],
+    "algorithm_description": ["pseudocode", "architecture_layers", "update_rules", "convergence_criteria"],
+    "model_assumptions": ["linearity_constraints", "distribution_assumptions", "stationarity", "independence_of_variables"],
+    "software_framework_and_version": ["pytorch_version", "tensorflow_version", "scikit_learn_version", "cuda_toolkit_version"],
+    
+    # Datasets
+    "dataset_statistics": ["total_samples", "class_distribution", "missing_values_percentage", "feature_dimensions"],
+    "study_cohort_description": ["demographics", "inclusion_criteria", "exclusion_criteria", "population_size"],
+    "dataset_citations": ["bibtex_entry", "doi", "source_url", "license_type"],
+    "data_collection_process": ["sampling_frequency", "survey_methodology", "raw_data_cleaning", "human_expert_review"],
+    "experimental_setup_and_devices": ["sensor_model", "camera_specifications", "environment_conditions", "calibration_steps"],
+    "data_acquisition_parameters": ["sampling_rate", "resolution", "exposure_time", "bit_depth"],
+    "annotation_instructions": ["labeling_guidelines", "annotator_background", "consensus_protocol", "inter_rater_reliability"],
+    "quality_control_methods": ["outlier_detection", "manual_audit", "cross_validation_of_labels", "automated_checks"],
+    "dataset_availability_link": ["zenodo_link", "huggingface_hub", "kaggle_url", "institutional_repo"],
+    "ethics_approval": ["irb_number", "consent_forms", "data_anonymization_protocol", "ethical_committee_name"],
+    
+    # Code
+    "dependencies_specification": ["requirements_txt", "conda_yaml", "dockerfile", "pip_freeze_list"],
+    "training_code": ["train_py", "fit_method", "gradient_descent_loop", "checkpoint_saving"],
+    "evaluation_code": ["test_py", "inference_script", "scoring_functions", "cross_val_script"],
+    "pretrained_models": ["model_weights_pth", "h5_files", "onnx_export", "checkpoints_folder"],
+    "run_commands_and_readme": ["usage_instructions", "bash_scripts", "cli_arguments", "reproducibility_log"],
+    
+    # Experimental Results
+    "hyperparameter_search_and_config": ["learning_rate", "batch_size"],
+    "parameter_sensitivity_analysis": ["ablation_study", "perturbation_tests", "robustness_checks", "variance_analysis"],
+    "training_and_evaluation_runs_count": ["epochs_count", "random_seeds", "early_stopping_patience", "n_iterations"],
+    "baseline_implementation_details": ["sota_comparisons", "vanilla_model_config", "reimplemented_methods", "default_parameters"],
+    "data_splits_definition": ["train_test_ratio", "stratification_method", "k_fold_n", "validation_set_size"],
+    "evaluation_metrics_and_statistics": ["confidence_intervals"],
+    "central_tendency_and_variation": ["mean_results", "standard_deviation", "median_values"],
+    "statistical_significance_analysis": ["t_test_results", "wilcoxon_rank_sum", "anova_table", "bonferroni_correction"],
+    "runtime_and_energy_cost": ["training_time_hours", "inference_latency_ms", "gpu_wattage", "carbon_footprint_estimate"],
+    "memory_footprint": ["peak_vram_usage", "ram_allocation_gb", "model_size_mb", "disk_space_required"],
+    "failure_analysis": ["edge_cases", "misclassified_examples", "limitations_discussion", "out_of_distribution_behavior"],
+    "computing_infrastructure": ["gpu_model_v100_a100", "cpu_specs", "os_version", "cloud_provider"],
+    "clinical_significance_discussion": ["p_value_vs_clinical_relevance", "real_world_impact", "patient_outcomes", "diagnostic_accuracy"]
+}
+
+reproducibility_mapping = {
+    # Models and Algorithms
+    "mathematical_setting": {"objective_function": [], "loss_equations": [], "optimization_space": [], "variables_definition": []},
+    "algorithm_description": {"pseudocode": [], "architecture_layers": [], "update_rules": [], "convergence_criteria": []},
+    "model_assumptions": {"linearity_constraints": [], "distribution_assumptions": [], "stationarity": [], "independence_of_variables": []},
+    "software_framework_and_version": {"pytorch_version": [], "tensorflow_version": [], "scikit_learn_version": [], "cuda_toolkit_version": []},
+    
+    # Datasets
+    "dataset_statistics": {"total_samples": [], "class_distribution": [], "missing_values_percentage": [], "feature_dimensions": []},
+    "study_cohort_description": {"demographics": [], "inclusion_criteria": [], "exclusion_criteria": [], "population_size": []},
+    "dataset_citations": {"bibtex_entry": [], "doi": [], "source_url": [], "license_type": []},
+    "data_collection_process": {"sampling_frequency": [], "survey_methodology": [], "raw_data_cleaning": [], "human_expert_review": []},
+    "experimental_setup_and_devices": {"sensor_model": [], "camera_specifications": [], "environment_conditions": [], "calibration_steps": []},
+    "data_acquisition_parameters": {"sampling_rate": [], "resolution": [], "exposure_time": [], "bit_depth": []},
+    "annotation_instructions": {"labeling_guidelines": [], "annotator_background": [], "consensus_protocol": [], "inter_rater_reliability": []},
+    "quality_control_methods": {"outlier_detection": [], "manual_audit": [], "cross_validation_of_labels": [], "automated_checks": []},
+    "dataset_availability_link": {"zenodo_link": [], "huggingface_hub": [], "kaggle_url": [], "institutional_repo": []},
+    "ethics_approval": {"irb_number": [], "consent_forms": [], "data_anonymization_protocol": [], "ethical_committee_name": []},
+    
+    # Code
+    "dependencies_specification": {"requirements_txt": [], "conda_yaml": [], "dockerfile": [], "pip_freeze_list": []},
+    "training_code": {"train_py": [], "fit_method": [], "gradient_descent_loop": [], "checkpoint_saving": []},
+    "evaluation_code": {"test_py": [], "inference_script": [], "scoring_functions": [], "cross_val_script": []},
+    "pretrained_models": {"model_weights_pth": [], "h5_files": [], "onnx_export": [], "checkpoints_folder": []},
+    "run_commands_and_readme": {"usage_instructions": [], "bash_scripts": [], "cli_arguments": [], "reproducibility_log": []},
+    
+    # Experimental Results
+    "hyperparameter_search_and_config": {"learning_rate": [], "batch_size": [], "grid_search_space": [], "optuna_study": [], "optimizer_config": []},
+    "parameter_sensitivity_analysis": {"ablation_study": [], "perturbation_tests": [], "robustness_checks": [], "variance_analysis": []},
+    "training_and_evaluation_runs_count": {"epochs_count": [], "random_seeds": [], "early_stopping_patience": [], "n_iterations": []},
+    "baseline_implementation_details": {"sota_comparisons": [], "vanilla_model_config": [], "reimplemented_methods": [], "default_parameters": []},
+    "data_splits_definition": {"train_test_ratio": [], "stratification_method": [], "k_fold_n": [], "validation_set_size": []},
+    "evaluation_metrics_and_statistics": {"f1_score": [], "accuracy_top_1": [], "rmse": [], "p_value_threshold": [], "confidence_intervals": []},
+    "central_tendency_and_variation": {"mean_results": [], "standard_deviation": [], "median_values": [], "error_bars_values": []},
+    "statistical_significance_analysis": {"t_test_results": [], "wilcoxon_rank_sum": [], "anova_table": [], "bonferroni_correction": []},
+    "runtime_and_energy_cost": {"training_time_hours": [], "inference_latency_ms": [], "gpu_wattage": [], "carbon_footprint_estimate": []},
+    "memory_footprint": {"peak_vram_usage": [], "ram_allocation_gb": [], "model_size_mb": [], "disk_space_required": []},
+    "failure_analysis": {"edge_cases": [], "misclassified_examples": [], "limitations_discussion": [], "out_of_distribution_behavior": []},
+    "computing_infrastructure": {"gpu_model_v100_a100": [], "cpu_specs": [], "os_version": [], "cloud_provider": []},
+    "clinical_significance_discussion": {"p_value_vs_clinical_relevance": [], "real_world_impact": [], "patient_outcomes": [], "diagnostic_accuracy": []},
+    "missing_values": []
+}
+
+reproducibility_mapping = {
+    # Models and Algorithms
+    "mathematical_setting": {"objective_function": [], "loss_equations": [], "optimization_space": [], "variables_definition": []},
+    "algorithm_description": {"pseudocode": [], "architecture_layers": [], "update_rules": [], "convergence_criteria": []},
+    "model_assumptions": {"linearity_constraints": [], "distribution_assumptions": [], "stationarity": [], "independence_of_variables": []},
+    "software_framework_and_version": {"pytorch_version": [], "tensorflow_version": [], "scikit_learn_version": [], "cuda_toolkit_version": []},
+    
+    # Datasets
+    "dataset_statistics": {"total_samples": [], "class_distribution": [], "missing_values_percentage": [], "feature_dimensions": []},
+    "study_cohort_description": {"demographics": [], "inclusion_criteria": [], "exclusion_criteria": [], "population_size": []},
+    "dataset_citations": {"bibtex_entry": [], "doi": [], "source_url": [], "license_type": []},
+    "data_collection_process": {"sampling_frequency": [], "survey_methodology": [], "raw_data_cleaning": [], "human_expert_review": []},
+    "experimental_setup_and_devices": {"sensor_model": [], "camera_specifications": [], "environment_conditions": [], "calibration_steps": []},
+    "data_acquisition_parameters": {"sampling_rate": [], "resolution": [], "exposure_time": [], "bit_depth": []},
+    "annotation_instructions": {"labeling_guidelines": [], "annotator_background": [], "consensus_protocol": [], "inter_rater_reliability": []},
+    "quality_control_methods": {"outlier_detection": [], "manual_audit": [], "cross_validation_of_labels": [], "automated_checks": []},
+    "dataset_availability_link": {"zenodo_link": [], "huggingface_hub": [], "kaggle_url": [], "institutional_repo": []},
+    "ethics_approval": {"irb_number": [], "consent_forms": [], "data_anonymization_protocol": [], "ethical_committee_name": []},
+    
+    # Code
+    "dependencies_specification": {"requirements_txt": [], "conda_yaml": [], "dockerfile": [], "pip_freeze_list": []},
+    "training_code": {"train_py": [], "fit_method": [], "gradient_descent_loop": [], "checkpoint_saving": []},
+    "evaluation_code": {"test_py": [], "inference_script": [], "scoring_functions": [], "cross_val_script": []},
+    "pretrained_models": {"model_weights_pth": [], "h5_files": [], "onnx_export": [], "checkpoints_folder": []},
+    "run_commands_and_readme": {"usage_instructions": [], "bash_scripts": [], "cli_arguments": [], "reproducibility_log": []},
+    
+    # Experimental Results
+    "hyperparameter_search_and_config": {"learning_rate": [], "batch_size": []},
+    "parameter_sensitivity_analysis": {"ablation_study": [], "perturbation_tests": [], "variance_analysis": []},
+    "training_and_evaluation_runs_count": {"epochs_count": [], "random_seeds": [], "n_iterations": []},
+    "baseline_implementation_details": {"sota_comparisons": [], "vanilla_model_config": [], "reimplemented_methods": [], "default_parameters": []},
+    "data_splits_definition": {"train_test_ratio": [], "stratification_method": [], "k_fold_n": [], "validation_set_size": []},
+    "evaluation_metrics_and_statistics": {"metrics_used": [], "confidence_intervals": []},
+    "central_tendency_and_variation": {"mean_results": [], "standard_deviation": [], "median_values": [], "error_bars_values": []},
+    "statistical_significance_analysis": {"t_test_results": [], "wilcoxon_rank_sum": [], "anova_table": [], "bonferroni_correction": []},
+    "runtime_and_energy_cost": {"training_time_hours": [], "inference_latency_ms": [], "gpu_wattage": [], "carbon_footprint_estimate": []},
+    "memory_footprint": {"peak_vram_usage": [], "ram_allocation_gb": [], "model_size_mb": [], "disk_space_required": []},
+    "failure_analysis": {"edge_cases": [], "misclassified_examples": [], "limitations_discussion": [], "out_of_distribution_behavior": []},
+    "computing_infrastructure": {"gpu_model_v100_a100": [], "cpu_specs": [], "os_version": [], "cloud_provider": []},
+    "clinical_significance_discussion": {"p_value_vs_clinical_relevance": [], "real_world_impact": [], "patient_outcomes": [], "diagnostic_accuracy": []},
+    "missing_values": []
+}
+
+reproducibility_framework = {
+    # Models and Algorithms
+    "models_and_algorithms": {
+        "mathematical_setting": [],
+        "algorithm_description": [],
+        "model_assumptions": [],
+        "software_framework_and_version": []
+    },
+    
+    # Datasets
+    "datasets": {
+        "dataset_statistics": [],
+        "study_cohort_description": [],
+        "dataset_citations": [],
+        "data_collection_process": [],
+        "experimental_setup_and_devices": [],
+        "data_acquisition_parameters": [],
+        "subjects_objects_involved": [],
+        "annotation_instructions": [],
+        "quality_control_methods": [],
+        "dataset_availability_link": [],
+        "ethics_approval": []
+    },
+    
+    # Code
+    "code_artifacts": {
+        "dependencies_specification": [],
+        "docker_file": [],
+        "training_code": [],
+        "evaluation_code": [],
+        "pretrained_models": [],
+        "preprocessing_details": [],
+        "dataset_access_integration": [],
+        "run_commands_and_readme": []
+    },
+    
+    # Experimental Results
+    "experimental_results": {
+        "hyperparameter_search_and_config": [],
+        "parameter_sensitivity_analysis": [],
+        "training_and_evaluation_runs_count": [],
+        "baseline_implementation_details": [],
+        "data_splits_definition": [],
+        "evaluation_metrics_and_statistics": [],
+        "central_tendency_and_variation": [],
+        "statistical_significance_analysis": [],
+        "runtime_and_energy_cost": [],
+        "memory_footprint": [],
+        "failure_analysis": [],
+        "computing_infrastructure": [],
+        "clinical_significance_discussion": []
+    },
+
+    "missing_candidates": []
+
+}

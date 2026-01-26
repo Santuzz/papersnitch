@@ -5,6 +5,18 @@ import os
 from datetime import date
 from pathlib import Path
 from pypdf import PdfReader
+import json
+
+from bs4 import BeautifulSoup
+import requests
+import time
+
+import subprocess
+import tempfile
+import re
+import shutil
+
+from webApp.models import Paper, TokenUsage
 
 os.environ.setdefault(
     "DJANGO_SETTINGS_MODULE",
@@ -12,10 +24,6 @@ os.environ.setdefault(
 )
 
 django.setup()
-
-from webApp.models import Paper, TokenUsage
-from bs4 import BeautifulSoup
-import requests
 
 
 def update_token(tokens_used: int, token_var: str) -> int:
@@ -45,7 +53,7 @@ def update_token(tokens_used: int, token_var: str) -> int:
 
 # Token limits for free tier
 TOKEN_LIMITS = {
-    "TOTAL_TOKEN_OPENAI": 500000,
+    "TOTAL_TOKEN_OPENAI": 250000,
     "TOTAL_TOKEN_OPENAI_MINI": 1250000,
 }
 
@@ -113,11 +121,182 @@ def get_code(url: str):
     Returns:
         A dictionary with summary, tree, and content of the ingested code.
     """
+    patterns = [
+        "*.md",
+        "docs/",
+        "*.ipynb",
+        "LICENSE*",
+        "main*",
+    ]
+    # TODO Testing python code linter (ruff)
+    patterns.append("eval/mrg_old2.py")
 
     summary, tree, content = ingest(
-        url, include_patterns=["*.md", "docs/", "*.ipynb", "LICENSE*", "main*"]
+        url,
+        include_patterns=patterns,
     )
     return f"SUMMARY\n{summary}\nTREE\n{tree}\nCONTENT\n{content}"
+
+
+def analyze_code(url: str) -> dict:
+    """Ingest code from a repository and run static analysis tools.
+
+    Runs ruff for Python, biome for JS/TS, and shellcheck for shell scripts.
+
+    Args:
+        url: URL of the code repository.
+    Returns:
+        A dictionary with:
+            - tree: The file tree structure of the repository
+            - content: The formatted content string (SUMMARY + TREE + CONTENT)
+            - code_errors: Static analysis results for each language
+    """
+    patterns = [
+        "*.md",
+        "docs/",
+        "*.ipynb",
+        "LICENSE*",
+        "main*",
+    ]
+    # TODO Testing python code linter (ruff)
+    patterns.append("eval/mrg_old2.py")
+
+    _, tree, content = ingest(
+        url,
+        include_patterns=patterns,
+    )
+
+    # Parse content to extract individual files
+    # Format: ================================================
+    #         FILE: filename.ext
+    #         ================================================
+    #         <content>
+    file_pattern = re.compile(
+        r"={48}\nFILE: (.+?)\n={48}\n(.*?)(?=\n={48}\nFILE:|\Z)", re.DOTALL
+    )
+
+    files_extracted = {}
+    for match in file_pattern.finditer(content):
+        filename = match.group(1).strip()
+        file_content = match.group(2)
+        # Skip empty files
+        if file_content.strip() and file_content.strip() != "[Empty file]":
+            files_extracted[filename] = file_content
+
+    if not files_extracted:
+        return {"error": "No files extracted from repository"}
+
+    results = {
+        "python": {"files": [], "issues": []},
+        "javascript": {"files": [], "issues": []},
+        "shell": {"files": [], "issues": []},
+    }
+
+    # Create temporary directory to write files for analysis
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Write files to temp directory preserving structure
+        for filepath, file_content in files_extracted.items():
+            # Create subdirectories if needed
+            full_path = Path(tmpdir) / filepath
+            full_path.parent.mkdir(parents=True, exist_ok=True)
+            full_path.write_text(file_content)
+
+            # Track files by type
+            if filepath.endswith((".py")):
+                results["python"]["files"].append(filepath)
+            elif filepath.endswith((".js", ".ts")):
+                results["javascript"]["files"].append(filepath)
+            elif filepath.endswith(".sh"):
+                results["shell"]["files"].append(filepath)
+
+        # Run ruff for Python files
+        if results["python"]["files"]:
+            try:
+                # Build list of Python file paths to check
+                python_files = [
+                    str(Path(tmpdir) / f) for f in results["python"]["files"]
+                ]
+
+                # Run ruff check for linting on specific files
+                proc = subprocess.run(
+                    [
+                        "ruff",
+                        "check",
+                        "--output-format=json",
+                        "--select",
+                        "E9,F63,F7,F82",
+                    ]
+                    + python_files,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                if proc.stdout:
+                    try:
+                        results["python"]["issues"] = json.loads(proc.stdout)
+                    except json.JSONDecodeError:
+                        results["python"]["issues"] = proc.stdout
+                if proc.stderr:
+                    results["python"]["stderr"] = proc.stderr
+            except FileNotFoundError:
+                results["python"]["error"] = "ruff not installed"
+            except subprocess.TimeoutExpired:
+                results["python"]["error"] = "ruff timed out"
+
+        # Run biome for JavaScript/TypeScript files
+        if results["javascript"]["files"]:
+            try:
+                proc = subprocess.run(
+                    ["biome", "check", "--reporter=json", "."],
+                    cwd=tmpdir,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                if proc.stdout:
+                    try:
+                        results["javascript"]["issues"] = json.loads(proc.stdout)
+                    except json.JSONDecodeError:
+                        results["javascript"]["issues"] = proc.stdout
+                if proc.stderr:
+                    results["javascript"]["stderr"] = proc.stderr
+            except FileNotFoundError:
+                results["javascript"]["error"] = "biome not installed"
+            except subprocess.TimeoutExpired:
+                results["javascript"]["error"] = "biome timed out"
+
+        # Run shellcheck for shell scripts
+        if results["shell"]["files"]:
+            try:
+                shell_files = [str(Path(tmpdir) / f) for f in results["shell"]["files"]]
+                proc = subprocess.run(
+                    ["shellcheck", "--format=json"] + shell_files,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                if proc.stdout:
+                    try:
+                        results["shell"]["issues"] = json.loads(proc.stdout)
+                    except json.JSONDecodeError:
+                        results["shell"]["issues"] = proc.stdout
+                if proc.stderr:
+                    results["shell"]["stderr"] = proc.stderr
+            except FileNotFoundError:
+                results["shell"]["error"] = "shellcheck not installed"
+            except subprocess.TimeoutExpired:
+                results["shell"]["error"] = "shellcheck timed out"
+
+    return {
+        "tree": tree,
+        "content": content,
+        "code_errors": results,
+    }
+
+
+def test_linter():
+    code_result = analyze_code("https://github.com/Siyou-Li/u2Tokenizer/")
+    print(code_result)
 
 
 def read_pdf(pdf_path: Path) -> str:
@@ -186,8 +365,6 @@ def get_pdf_content(pdf_path):
         else:
             abstract_text = abstract_tag.get_text(strip=True)
 
-    # Text extraction
-
     body = soup.find("body")
 
     text_content = []
@@ -245,6 +422,8 @@ def get_pdf_content(pdf_path):
     return title, text
 
 
+if __name__ == "__main__":
+    test_linter()
 # def upload_pdf(pdf_file):
 #     """Upload a PDF file in the DB
 #     pdf_file comes from request.FILES["pdf_file"]"""
@@ -275,3 +454,82 @@ def get_pdf_content(pdf_path):
 #     paper = Paper.objects.create(title=title, file=pdf_content, text=text)
 
 #     return paper
+{
+    "python": {
+        "files": ["Constants.py", "main.py", "Responses.py"],
+        "issues": [
+            {
+                "cell": None,
+                "code": "F706",
+                "end_location": {"column": 36, "row": 20},
+                "filename": "/tmp/tmpiyrcdv6i/main.py",
+                "fix": None,
+                "location": {"column": 1, "row": 20},
+                "message": "`return` statement outside of a function/method",
+                "noqa_row": 20,
+                "url": "https://docs.astral.sh/ruff/rules/return-outside-function",
+            },
+            {
+                "cell": None,
+                "code": "F632",
+                "end_location": {"column": 15, "row": 24},
+                "filename": "/tmp/tmpiyrcdv6i/main.py",
+                "fix": {
+                    "applicability": "safe",
+                    "edits": [
+                        {
+                            "content": "==",
+                            "end_location": {"column": 8, "row": 24},
+                            "location": {"column": 6, "row": 24},
+                        }
+                    ],
+                    "message": "Replace `is` with `==`",
+                },
+                "location": {"column": 4, "row": 24},
+                "message": "Use `==` to compare constant literals",
+                "noqa_row": 24,
+                "url": "https://docs.astral.sh/ruff/rules/is-literal",
+            },
+            {
+                "cell": None,
+                "code": "F704",
+                "end_location": {"column": 9, "row": 28},
+                "filename": "/tmp/tmpiyrcdv6i/main.py",
+                "fix": None,
+                "location": {"column": 1, "row": 28},
+                "message": "`yield` statement outside of a function",
+                "noqa_row": 28,
+                "url": "https://docs.astral.sh/ruff/rules/yield-outside-function",
+            },
+        ],
+    },
+}
+{
+    "python": {
+        "files": ["Constants.py", "main.py", "Responses.py"],
+        "issues": [
+            {
+                "cell": None,
+                "code": "invalid-syntax",
+                "end_location": {"column": 5, "row": 33},
+                "filename": "/tmp/tmpamzgm23o/main.py",
+                "fix": None,
+                "location": {"column": 1, "row": 33},
+                "message": "Unexpected indentation",
+                "noqa_row": None,
+                "url": None,
+            },
+            {
+                "cell": None,
+                "code": "invalid-syntax",
+                "end_location": {"column": 1, "row": 35},
+                "filename": "/tmp/tmpamzgm23o/main.py",
+                "fix": None,
+                "location": {"column": 1, "row": 35},
+                "message": "Expected a statement",
+                "noqa_row": None,
+                "url": None,
+            },
+        ],
+    }
+}

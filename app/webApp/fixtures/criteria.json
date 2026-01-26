@@ -15,7 +15,7 @@
     "fields": {
       "name": "Datasets",
       "key": "datasets",
-      "description": "Provide ONLY the list of datasets NAMES that were used in this paper for training or evaluation. Be sure the datasets mentioned are used in the research because as some mentioned datasets may not actually be used in the paper (e.g., they may be referenced because they were not used, or as potential future additions).",
+      "description": "A good Datasets and Split description tells about the origin, characteristics, and the specific strategy used to partition data for training and testing. The subsequent parts are only an example and not mandatory, don't be too strict when give the score about this criteria but used them as a reference. The parts COULD be included are: explicit availability of the data (citations, URLs, or version numbers); summary statistics (total number of samples, class balance/distribution, input resolution or format); precise definition of data splits (exact numbers or percentages for training, validation, and test sets); the splitting methodology (random, stratified, temporal, or subject-wise/patient-wise split to ensure independence); and measures taken to prevent data leakage between training and testing sets.",
       "weight": 1.0
     }
   },
@@ -56,6 +56,26 @@
       "name": "Licensing",
       "key": "licensing",
       "description": "A good Licensing description tells about legal, ethical, and compliance information for datasets, code, and experiments involving human subjects. If in the paper it's used code or data provided from somewhere else they should say which license there is on that regarding how another user can used that information. If they used a public dataset no license it's needed. You can find these information mainly in the code repository. The subsequent parts are only an example and not mandatory, don't be too strict when give the score about them but used them as a reference. The parts COULD be included are:  dataset and code licensing terms (e.g., CC-BY, CC-BY-NC, MIT, GPL), any usage restrictions, ethical approvals or IRB statements, informed consent procedures, anonymization or pseudonymization methods, and discussions of privacy protection, risks, societal impact, bias, or limitations. Look for these information mainly in the CODE REPOSITORY provided",
+      "weight": 1.0
+    }
+  },
+  {
+    "model": "webApp.criterion",
+    "pk": 7,
+    "fields": {
+      "name": "Datasets_2",
+      "key": "datasets_2",
+      "description": "A good Models and Algorithms description contains:\n* Formal Definition: A clear description of the mathematical setting (formulas, notations), the algorithm (pseudo-code), and the model architecture.\n* Analysis of Assumptions: An explicit explanation of any theoretical assumptions or simplifications adopted during development.\n* Environment Specifications: A declaration of the software framework used (e.g., PyTorch, TensorFlow, JAX) and the specific versions to ensure technical compatibility.",
+      "weight": 1.0
+    }
+  },
+  {
+    "model": "webApp.criterion",
+    "pk": 8,
+    "fields": {
+      "name": "Experiments_2",
+      "key": "experiments_2",
+      "description": "A good Experiments description contains:\n* Hyperparameter details: The range of hyperparameters considered, the method used to select the best configuration, and the final specification of all hyperparameters used to generate the reported results.\n* Robustness and Sensitivity: Information regarding performance sensitivity to parameter changes and the exact number of training and evaluation runs conducted.\n* Benchmarking: Clear details on how baseline methods were implemented, tuned, and compared fairly against the proposed method.\n* Evaluation Framework: A clear definition of the specific evaluation metrics, statistical tools, and precise details of the training/validation/testing splits used.\n* Results Analysis: A description of results including central tendency (e.g., mean), variation (e.g., error bars), and an analysis of the statistical significance of performance differences.\n* Resource Efficiency: The average runtime per result, estimated energy costs, memory footprint, and a description of the computing infrastructure (hardware and software) used.\n* Qualitative and Clinical Analysis: An analysis of failure cases (situations where the method did not perform well) and, where applicable, a discussion of the clinical significance of the findings.",
       "weight": 1.0
     }
   }

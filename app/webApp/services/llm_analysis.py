@@ -34,7 +34,6 @@ from webApp.models import (
     Prompt,
 )
 from webApp.functions import (
-    get_code,
     update_token,
     check_token_limit,
     TokenLimitExceededError,
@@ -52,9 +51,7 @@ class CriterionResponse(BaseModel):
     score_explanation: str = Field(
         ..., description="Detailed explanation for the assigned score"
     )
-    score: int = Field(
-        ..., description="Integer score between 0 and 100, or -1 for N/A"
-    )
+    score: int = Field(..., description="Integer score between 0 and 10, or -1 for N/A")
 
     class Config:
         extra = "forbid"
@@ -190,6 +187,7 @@ def llm_analysis(
                 reasoning=reasoning,
                 # text=JSON_SCHEMA,
                 text_format=CriterionResponse,
+                max_output_tokens=10000,
             )
 
         output_tokens = response.usage.output_tokens
@@ -221,29 +219,6 @@ def llm_analysis(
         input_tokens = 0
         output_tokens = 0
         total_tokens = 0
-    #     input_list[0]["content"] = (
-    #         input_list[0]["content"]
-    #         + "\n Respond in JSON format only. following this schema:"
-    #         + str(json_object)
-    #     )
-    #     completion = client.chat.completions.create(
-    #         model=config["model"],
-    #         messages=input_list,
-    #         temperature=config.get("temperature", 1.0),
-    #         response_format={"type": "json_object"},
-    #     )
-    #     response = completion.choices[0].message.content
-    #     output_tokens = completion.usage.completion_tokens
-    #     input_tokens = completion.usage.prompt_tokens
-    #     total_tokens = completion.usage.total_tokens
-
-    # try:
-    #     json_response = json.loads(response)
-    # except json.JSONDecodeError as e:
-    #     response = {
-    #         "error": f"Error decoding JSON (LLM response not well formatted): {e}",
-    #         "raw_content": response,
-    #     }
 
     update_token(total_tokens, config["token_var"])
 
@@ -289,13 +264,13 @@ def pdf_analysis(
         if "reasoning" in config:
             reasoning = {"effort": config["reasoning"].get("effort", "none")}
 
-        iteration_start = time.perf_counter()
-
         response = client.responses.parse(
             model=config["model"],
             input=input_list,
             reasoning=reasoning,
+            temperature=config.get("temperature", 0.1),
             text_format=CriterionResponse,
+            max_output_tokens=10000,
         )
 
         output_tokens = response.usage.output_tokens
@@ -316,8 +291,6 @@ def pdf_analysis(
         output_tokens = 0
         total_tokens = 0
 
-    duration = time.perf_counter() - iteration_start
-
     update_token(total_tokens, config["token_var"])
 
     return {
@@ -325,7 +298,6 @@ def pdf_analysis(
         "result": parsed_result,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
-        "duration": round(duration, 2),
     }
 
 

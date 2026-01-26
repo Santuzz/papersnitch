@@ -231,7 +231,7 @@ class Analysis(models.Model):
                 weighted_score += score * weight
                 total_weight += weight
 
-        return int(weighted_score / total_weight)
+        return round(weighted_score / total_weight, 2)
 
     def __str__(self):
         return f"{self.paper.title} - {self.model_name}"
@@ -385,6 +385,7 @@ class LLMModelConfig(models.Model):
         ("GEMINI_API_KEY", "Gemini API Key"),
         ("BYTEPLUS_API_KEY", "BytePlus API Key"),
         ("ANTHROPIC_API_KEY", "Anthropic API Key"),
+        ("MOONSHOT_API_KEY", "Moonshot API Key"),
     ]
 
     # Basic identification

@@ -9,7 +9,9 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views import View
 from webApp.models import Operations, Analysis, BugReport, Paper
+from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+import time
 from django.shortcuts import render, redirect
 from .functions import get_text, get_pdf_content
 
@@ -52,11 +54,151 @@ class HomePageView(View):
     template_name = "home.html"
 
     def get(self, request):
-        # Prende i tipi di sezione dal database (modificabili da admin)
         operations = Operations.objects.all()
         operation = [ct.name for ct in operations]
 
         return render(request, self.template_name, {"operations": operation})
+
+
+class CheckPastAnalysesView(LoginRequiredMixin, View):
+    """View for checking past analyses for a PDF paper."""
+
+    login_url = "/accounts/login/"
+
+    def post(self, request):
+        """Handle PDF upload and check for past analyses."""
+        if "pdf_file" not in request.FILES:
+            return JsonResponse({"error": "No PDF file provided"}, status=400)
+
+        pdf_file = request.FILES["pdf_file"]
+
+        # Validate file type
+        if not pdf_file.name.endswith(".pdf"):
+            return JsonResponse({"error": "File must be a PDF"}, status=400)
+
+        # Read first bytes to check if it's a valid PDF
+        first_bytes = pdf_file.read(4)
+        pdf_file.seek(0)  # Reset file pointer
+
+        if not first_bytes.startswith(b"%PDF"):
+            return JsonResponse(
+                {"error": "Downloaded file is not a valid PDF"}, status=400
+            )
+
+        # Extract text and get title
+
+        try:
+            # Save PDF to a temporary file and pass the path
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+                for chunk in pdf_file.chunks():
+                    tmp_file.write(chunk)
+                tmp_path = tmp_file.name
+
+            try:
+                title, text = get_pdf_content(tmp_path)
+            finally:
+                # Clean up temporary file
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+
+            # Validate that we got title and text
+            if title is None or text is None:
+                return JsonResponse(
+                    {
+                        "error": "Failed to extract text from PDF. The PDF processing service may be unavailable."
+                    },
+                    status=503,
+                )
+
+        except Exception as e:
+            return JsonResponse(
+                {"error": f"Failed to extract text from PDF: {str(e)}"}, status=400
+            )
+
+        # Find existing paper by title
+        paper = Paper.objects.filter(title=title).first()
+
+        past_analyses = []
+        if paper:
+            # Get all analyses for this paper (not just user's)
+            analyses = (
+                Analysis.objects.filter(paper=paper)
+                .select_related("user")
+                .order_by("-created_at")
+            )
+
+            for analysis in analyses:
+                past_analyses.append(
+                    {
+                        "id": analysis.id,
+                        "model_name": analysis.model_name,
+                        "model_key": analysis.model_key,
+                        "created_at": analysis.created_at.strftime("%b %d, %Y %H:%M"),
+                        "duration": analysis.duration,
+                        "input_tokens": analysis.input_tokens,
+                        "output_tokens": analysis.output_tokens,
+                        "user": (
+                            analysis.user.username if analysis.user else "Anonymous"
+                        ),
+                        "has_error": bool(analysis.error),
+                    }
+                )
+
+        else:
+
+            # Delete an exsisting file with the same name if exists
+            upload_path = Paper._meta.get_field("file").upload_to
+            filename = title + ".pdf"
+            full_path = os.path.join(upload_path, filename)
+
+            if default_storage.exists(full_path):
+                default_storage.delete(full_path)
+
+            # Save new paper
+            pdf_file.seek(0)  # Reset file pointer for saving
+            pdf_content = ContentFile(pdf_file.read(), name=filename)
+
+            paper = Paper.objects.create(title=title, text=text, file=pdf_content)
+            paper.save()
+
+        return JsonResponse(
+            {
+                "title": title,
+                "has_past_analyses": len(past_analyses) > 0,
+                "past_analyses": past_analyses,
+            }
+        )
+
+
+class AnalysisDetailView(LoginRequiredMixin, View):
+    """API view to get analysis details for modal display."""
+
+    login_url = "/accounts/login/"
+
+    def get(self, request, analysis_id):
+        """Get analysis details as JSON."""
+        try:
+            analysis = Analysis.objects.select_related("paper").get(
+                id=analysis_id, user=request.user
+            )
+        except Analysis.DoesNotExist:
+            return JsonResponse({"error": "Analysis not found"}, status=404)
+
+        data = {
+            "id": analysis.id,
+            "paper_title": analysis.paper.title,
+            "model_name": analysis.model_name,
+            "model_key": analysis.model_key,
+            "created_at": analysis.created_at.strftime("%b %d, %Y %H:%M"),
+            "duration": analysis.duration,
+            "input_tokens": analysis.input_tokens,
+            "output_tokens": analysis.output_tokens,
+            "error": analysis.error,
+            "result": analysis.raw_response,
+            "final_score": analysis.final_score(),
+        }
+
+        return JsonResponse(data)
 
 
 class AnalyzePaperView(View):
@@ -110,109 +252,6 @@ class AnalyzePaperView(View):
         run_analysis_celery_task.delay(task_id)
 
         return JsonResponse({"task_id": task_id})
-
-
-class CheckPastAnalysesView(LoginRequiredMixin, View):
-    """View for checking past analyses for a PDF paper."""
-
-    login_url = "/accounts/login/"
-
-    def post(self, request):
-        """Handle PDF upload and check for past analyses."""
-        if "pdf_file" not in request.FILES:
-            return JsonResponse({"error": "No PDF file provided"}, status=400)
-
-        pdf_file = request.FILES["pdf_file"]
-
-        # Validate file type
-        if not pdf_file.name.endswith(".pdf"):
-            return JsonResponse({"error": "File must be a PDF"}, status=400)
-
-        # Read first bytes to check if it's a valid PDF
-        first_bytes = pdf_file.read(4)
-        pdf_file.seek(0)  # Reset file pointer
-
-        if not first_bytes.startswith(b"%PDF"):
-            return JsonResponse(
-                {"error": "Downloaded file is not a valid PDF"}, status=400
-            )
-
-        # Extract text and get title
-        try:
-            # Save PDF to a temporary file and pass the path
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                for chunk in pdf_file.chunks():
-                    tmp_file.write(chunk)
-                tmp_path = tmp_file.name
-
-            try:
-                title, text = get_pdf_content(tmp_path)
-            finally:
-                # Clean up temporary file
-                if os.path.exists(tmp_path):
-                    os.unlink(tmp_path)
-
-            # Validate that we got title and text
-            if title is None or text is None:
-                return JsonResponse(
-                    {
-                        "error": "Failed to extract text from PDF. The PDF processing service may be unavailable."
-                    },
-                    status=503,
-                )
-            # text = get_text(pdf_file)
-
-            # title = text.split("\n")[0]
-        except Exception as e:
-            return JsonResponse(
-                {"error": f"Failed to extract text from PDF: {str(e)}"}, status=400
-            )
-
-        # Find existing paper by title
-        paper = Paper.objects.filter(title=title).first()
-
-        past_analyses = []
-        if paper:
-            # Get all analyses for this paper (not just user's)
-            analyses = (
-                Analysis.objects.filter(paper=paper)
-                .select_related("user")
-                .order_by("-created_at")
-            )
-
-            for analysis in analyses:
-                past_analyses.append(
-                    {
-                        "id": analysis.id,
-                        "model_name": analysis.model_name,
-                        "model_key": analysis.model_key,
-                        "created_at": analysis.created_at.strftime("%b %d, %Y %H:%M"),
-                        "duration": analysis.duration,
-                        "input_tokens": analysis.input_tokens,
-                        "output_tokens": analysis.output_tokens,
-                        "user": (
-                            analysis.user.username if analysis.user else "Anonymous"
-                        ),
-                        "has_error": bool(analysis.error),
-                    }
-                )
-        else:
-            pdf_file.seek(0)  # Reset file pointer for saving
-
-            # Read file content for storage
-            pdf_content = pdf_file.read()
-            pdf_content = ContentFile(pdf_content, name=title + ".pdf")
-
-            paper = Paper.objects.create(title=title, text=text, file=pdf_content)
-            paper.save()
-
-        return JsonResponse(
-            {
-                "title": title,
-                "has_past_analyses": len(past_analyses) > 0,
-                "past_analyses": past_analyses,
-            }
-        )
 
 
 class AnalysisStatusView(LoginRequiredMixin, View):
