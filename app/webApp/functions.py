@@ -294,6 +294,115 @@ def analyze_code(url: str) -> dict:
     }
 
 
+def from_doc_to_code(doc_text: str, url: str) -> list[str]:
+    """Extract all code files from a document text.
+    This function its designed to be used in the initial stage of the code analysis pipeline,
+    to get the subset of the entire repository useful to evaluate the reproducibility of the paper
+    Args:
+        doc_text: The documentation text extracted from the code repository.
+        url: URL of the code repository.
+    Returns:
+        List of all code files path found in the document text.
+    """
+    # Step 1: Parse GitHub URL to extract owner and repo name
+    github_pattern = re.compile(
+        r"https?://(?:www\.)?github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)"
+    )
+    match = github_pattern.match(url.rstrip("/"))
+    if not match:
+        return []
+
+    owner, repo = match.groups()
+    # Remove .git suffix if present
+    repo = repo.removesuffix(".git")
+
+    # Step 2: Fetch repository tree using GitHub API
+    api_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/main?recursive=1"
+    headers = {"Accept": "application/vnd.github.v3+json"}
+
+    # Try main branch first, then master
+    response = requests.get(api_url, headers=headers, timeout=30)
+    if response.status_code != 200:
+        api_url = (
+            f"https://api.github.com/repos/{owner}/{repo}/git/trees/master?recursive=1"
+        )
+        response = requests.get(api_url, headers=headers, timeout=30)
+        if response.status_code != 200:
+            return []
+
+    tree_data = response.json()
+    if "tree" not in tree_data:
+        return []
+
+    # Build a set of all file paths in the repository
+    repo_files = {item["path"] for item in tree_data["tree"] if item["type"] == "blob"}
+
+    # Also build a mapping of filename -> list of full paths for quick lookup
+    filename_to_paths: dict[str, list[str]] = {}
+    for filepath in repo_files:
+        filename = Path(filepath).name
+        if filename not in filename_to_paths:
+            filename_to_paths[filename] = []
+        filename_to_paths[filename].append(filepath)
+
+    # Step 3: Extract filenames mentioned in doc_text
+    # Pattern to match common code file references
+    # Matches: file.py, path/to/file.py, `file.py`, "file.py", 'file.py'
+    file_patterns = [
+        # Match paths with extensions (e.g., src/main.py, utils/helper.js)
+        r"(?:[\w./\\-]+/)?[\w.-]+\.(?:py|js|ts|sh|yaml|yml|json|toml|cfg|ini|txt|md|rst|ipynb)",
+        # Match backtick-quoted filenames
+        r"`([\w./\\-]+\.(?:py|js|ts|sh|yaml|yml|json|toml|cfg|ini|txt|md|rst|ipynb))`",
+        # Match quoted filenames
+        r'["\']([w./\\-]+\.(?:py|js|ts|sh|yaml|yml|json|toml|cfg|ini|txt|md|rst|ipynb))["\']',
+    ]
+
+    found_files = set()
+    for pattern in file_patterns:
+        matches = re.findall(pattern, doc_text, re.IGNORECASE)
+        for match in matches:
+            # Clean up the match
+            cleaned = match.strip("`\"'").strip()
+            if cleaned:
+                found_files.add(cleaned)
+
+    # Step 4: Resolve found filenames to absolute paths in the repository
+    resolved_paths = []
+    for found_file in found_files:
+        # Check if it's already a full path in the repo
+        if found_file in repo_files:
+            resolved_paths.append(found_file)
+            continue
+
+        # Try to match just the filename
+        filename = Path(found_file).name
+        if filename in filename_to_paths:
+            # If found_file contains a partial path, try to match it
+            if "/" in found_file or "\\" in found_file:
+                # Normalize the path
+                normalized = found_file.replace("\\", "/")
+                for full_path in filename_to_paths[filename]:
+                    if full_path.endswith(normalized):
+                        resolved_paths.append(full_path)
+                        break
+                else:
+                    # If no exact suffix match, add all matching filenames
+                    resolved_paths.extend(filename_to_paths[filename])
+            else:
+                # Just a filename, add all matching paths
+                resolved_paths.extend(filename_to_paths[filename])
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_paths = []
+    for path in resolved_paths:
+        if path not in seen:
+            seen.add(path)
+            unique_paths.append(path)
+    print(unique_paths)
+    return unique_paths
+
+
 def test_linter():
     code_result = analyze_code("https://github.com/Siyou-Li/u2Tokenizer/")
     print(code_result)

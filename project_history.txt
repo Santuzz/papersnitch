@@ -176,11 +176,24 @@ Manca solo implementazione su server di KIMI K2. Niente reasoning perchè non ha
 23/01/2026
 Terminare compilazione grafo e capire come gestire evidence locator
 
+26/01/2026
+Iniziata implementazione linter per l'analisi statica del codice
+
+27/01/2026
+Definito gli evidence locator
+
+28/\01/2026
+Definito in modo più dettagliato la valutazione degli evidence locator (da finire)
+
 
 TODO:
 Short term:
-- Creazione grafo chiamate LLM seguendo linee guida miccai (https://conferences.miccai.org/2026/en/PAPER-SUBMISSION-GUIDELINES.html#reproducibleresearch)
-- Aggiustare lentezza grobid nell'estrarre testo dal paper 
+- Ripensare evidence locator (Unico che comprende tutti i tipi di paper, oppure farne N+1 - Un generico e uno per ogni tipo di paper)
+- Pensare al prompt per l'evidence locator
+- Ragionare su come gestire l'estrazione di parti salienti del testo e la valutazione tramite evidence locator
+- Finire di definire i campi e i valori attesi riguardo gli experimental resualts (Utilizzare come riferimento la chat di gemini "Reviewing AI model assumptions")
+
+- Chiedere CPU per far girare GROBID e vedere se si velocizza 
 - Analisi statica del codice (per vedere se non ci sono errori di sintassi trovabili senza LLM, esistono tool per fare ciò) - troppi errori inutili trovati da ruff e company, aggiustare da impostazioni (https://docs.astral.sh/ruff/linter/#rule-selection)
 - combinazione risultato multimodello
 - Trovare un modo per analizzare il codice (max 400k context)
@@ -204,7 +217,7 @@ Short term:
 
 
 Long term:
-
+    - Valutare la resistenza all'injection resistance della pipeline di valutazione
     - Integrare celery + redis per crawling in background
     - Aggiungere badge per indicare nell'icona del profilo una nuova analisi completata non letta
     - Rendere i risultati di ricerca dell'analisi collassabili
@@ -310,184 +323,316 @@ CELERY:
 
 
 reproducibility_mapping = {
-    # Models and Algorithms
-    "mathematical_setting": ["objective_function", "loss_equations", "optimization_space", "variables_definition"],
-    "algorithm_description": ["pseudocode", "architecture_layers", "update_rules", "convergence_criteria"],
-    "model_assumptions": ["linearity_constraints", "distribution_assumptions", "stationarity", "independence_of_variables"],
-    "software_framework_and_version": ["pytorch_version", "tensorflow_version", "scikit_learn_version", "cuda_toolkit_version"],
-    
-    # Datasets
-    "dataset_statistics": ["total_samples", "class_distribution", "missing_values_percentage", "feature_dimensions"],
-    "study_cohort_description": ["demographics", "inclusion_criteria", "exclusion_criteria", "population_size"],
-    "dataset_citations": ["bibtex_entry", "doi", "source_url", "license_type"],
-    "data_collection_process": ["sampling_frequency", "survey_methodology", "raw_data_cleaning", "human_expert_review"],
-    "experimental_setup_and_devices": ["sensor_model", "camera_specifications", "environment_conditions", "calibration_steps"],
-    "data_acquisition_parameters": ["sampling_rate", "resolution", "exposure_time", "bit_depth"],
-    "annotation_instructions": ["labeling_guidelines", "annotator_background", "consensus_protocol", "inter_rater_reliability"],
-    "quality_control_methods": ["outlier_detection", "manual_audit", "cross_validation_of_labels", "automated_checks"],
-    "dataset_availability_link": ["zenodo_link", "huggingface_hub", "kaggle_url", "institutional_repo"],
-    "ethics_approval": ["irb_number", "consent_forms", "data_anonymization_protocol", "ethical_committee_name"],
-    
-    # Code
-    "dependencies_specification": ["requirements_txt", "conda_yaml", "dockerfile", "pip_freeze_list"],
-    "training_code": ["train_py", "fit_method", "gradient_descent_loop", "checkpoint_saving"],
-    "evaluation_code": ["test_py", "inference_script", "scoring_functions", "cross_val_script"],
-    "pretrained_models": ["model_weights_pth", "h5_files", "onnx_export", "checkpoints_folder"],
-    "run_commands_and_readme": ["usage_instructions", "bash_scripts", "cli_arguments", "reproducibility_log"],
-    
-    # Experimental Results
-    "hyperparameter_search_and_config": ["learning_rate", "batch_size"],
-    "parameter_sensitivity_analysis": ["ablation_study", "perturbation_tests", "robustness_checks", "variance_analysis"],
-    "training_and_evaluation_runs_count": ["epochs_count", "random_seeds", "early_stopping_patience", "n_iterations"],
-    "baseline_implementation_details": ["sota_comparisons", "vanilla_model_config", "reimplemented_methods", "default_parameters"],
-    "data_splits_definition": ["train_test_ratio", "stratification_method", "k_fold_n", "validation_set_size"],
-    "evaluation_metrics_and_statistics": ["confidence_intervals"],
-    "central_tendency_and_variation": ["mean_results", "standard_deviation", "median_values"],
-    "statistical_significance_analysis": ["t_test_results", "wilcoxon_rank_sum", "anova_table", "bonferroni_correction"],
-    "runtime_and_energy_cost": ["training_time_hours", "inference_latency_ms", "gpu_wattage", "carbon_footprint_estimate"],
-    "memory_footprint": ["peak_vram_usage", "ram_allocation_gb", "model_size_mb", "disk_space_required"],
-    "failure_analysis": ["edge_cases", "misclassified_examples", "limitations_discussion", "out_of_distribution_behavior"],
-    "computing_infrastructure": ["gpu_model_v100_a100", "cpu_specs", "os_version", "cloud_provider"],
-    "clinical_significance_discussion": ["p_value_vs_clinical_relevance", "real_world_impact", "patient_outcomes", "diagnostic_accuracy"]
+    # -------------------------------------------------------------------------
+    # Models and Algorithms
+    # -------------------------------------------------------------------------
+    "mathematical_setting": {
+        "objective_function": True/False, 
+        "loss_formulation": True/False, 
+        "optimization_constraints": True/False, 
+        "variable_definitions": True/False,
+    },
+    "algorithm_description": {
+        "pseudocode": True/False, 
+        "architecture_diagrams": ???, #come poter far capire all'llm se c'è o meno? 
+        "update_rules": True/False, 
+        "convergence_criteria": True/False
+    },
+    "model_assumptions": {
+        "linearity_constraints": [], 
+        "distributional_priors": [], 
+        "stationarity_assumptions": [], 
+        "independence_assumptions": []
+    },
+    "software_frameworks": {
+        "libraries_used": True/False, 
+        "version_numbers": True/False, 
+        "cuda_or_backend_versions": True/False, 
+        "random_state_seeding": True/False
+    },
+
+    # -------------------------------------------------------------------------
+    # Datasets
+    # -------------------------------------------------------------------------
+    "dataset_statistics": {
+        "sample_counts": True/False, 
+        "class_balance_distribution": True/False, 
+        "missing_data_rates": True/False, 
+        "feature_dimensionality": True/False,
+        "feature_correlation_analysis": True/False,
+        "data_leakage": True/False
+    },
+    "study_cohort_description": {
+        "demographics": True/False, 
+        "inclusion_criteria": True/False, 
+        "exclusion_criteria": True/False, 
+        "population_size": True/False
+    },
+    "dataset_metadata": { 
+        "doi": True/False,
+        "source_url": True/False, 
+        "license_type": True/False, 
+        "versioning": True/False
+    },
+    "data_collection_process": {
+        "data_source": True/False,
+        "sampling_methodology": True/False, 
+        "temporal_period": True/False,
+        "survey_design": True/False, 
+        "cleaning_preprocessing": True/False, 
+        "expert_review_process": True/False
+    },
+    "acquisition_setup": {
+        "device_specifications": True/False, 
+        "environmental_conditions": True/False, 
+        "calibration_procedures": True/False, 
+        "acquisition_parameters": True/False # generalization of sampling_rate, exposure, etc.
+    },
+    "annotation_process": {
+        "labeling_guidelines": True/False, 
+        "annotator_qualifications": True/False, 
+        "consensus_protocols": True/False, 
+        "inter_rater_reliability": True/False
+    },
+    "quality_control": {
+        "outlier_detection_methods": True/False, 
+        "manual_audits": True/False, 
+        "validation_checks": True/False, 
+        "automated_filtering": True/False
+    },
+    "availability_and_ethics": {
+        "repository_links": True/False, 
+        "access_permissions": True/False, 
+        "ethics_approval_id": True/False, 
+        "anonymization_protocol": True/False
+    },
+
+    # -------------------------------------------------------------------------
+    # Code
+    # -------------------------------------------------------------------------
+    "environment_setup": {
+        "dependency_files": [], # e.g., requirements.txt, conda.yaml
+        "container_definitions": [], # e.g., Dockerfile
+        "setup_scripts": [], 
+        "os_requirements": []
+    },
+    "implementation_scripts": {
+        "training_logic": [], 
+        "inference_logic": [], 
+        "model_definitions": [], 
+        "utility_functions": []
+    },
+    "reproducibility_artifacts": {
+        "pretrained_weights": [], 
+        "checkpoints": [], 
+        "configuration_files": [], 
+        "logging_outputs": []
+    },
+    "documentation": {
+        "usage_instructions": [], 
+        "execution_commands": [], 
+        "readme_content": [], 
+        "argument_definitions": []
+    },
+
+    # -------------------------------------------------------------------------
+    # Experimental Results
+    # -------------------------------------------------------------------------
+    "hyperparameters": {
+        "optimization_parameters": [], # e.g., learning rate, momentum
+        "batch_sizes": [], 
+        "search_strategy": [], # e.g., grid search, optuna
+        "architectural_hyperparams": []
+    },
+    "sensitivity_analysis": {
+        "ablation_studies": [], 
+        "perturbation_tests": [], 
+        "robustness_metrics": [], 
+        "variance_analysis": []
+    },
+    "training_dynamics": {
+        "epoch_counts": [], 
+        "stopping_criteria": [], 
+        "random_seeds_used": [], 
+        "iterations": []
+    },
+    "comparative_analysis": {
+        "baseline_comparisons": [], 
+        "sota_benchmarks": [], 
+        "implementation_variants": [], 
+        "default_settings_comparison": []
+    },
+    "evaluation_setup": {
+        "data_split_ratios": [], 
+        "stratification_method": [], 
+        "cross_validation_k": [], 
+        "metric_definitions": [] # Replaces specific metrics like f1_score
+    },
+    "statistical_results": {
+        "central_tendency_measures": [], # mean, median
+        "dispersion_measures": [], # std dev, error bars
+        "significance_tests": [], # t-test, ANOVA
+        "confidence_intervals": []
+    },
+    "resource_consumption": {
+        "execution_time": [], 
+        "latency_metrics": [], 
+        "energy_footprint": [], 
+        "memory_requirements": []
+    },
+    "infrastructure_used": {
+        "hardware_specifications": [], # GPU/CPU models
+        "compute_environment": [], # Cloud vs Local
+        "parallelization_setup": [], 
+        "storage_requirements": []
+    },
+    "qualitative_analysis": {
+        "failure_modes": [], 
+        "limitation_discussion": [], 
+        "clinical_relevance": [], 
+        "real_world_impact": []
+    }
 }
 
-reproducibility_mapping = {
-    # Models and Algorithms
-    "mathematical_setting": {"objective_function": [], "loss_equations": [], "optimization_space": [], "variables_definition": []},
-    "algorithm_description": {"pseudocode": [], "architecture_layers": [], "update_rules": [], "convergence_criteria": []},
-    "model_assumptions": {"linearity_constraints": [], "distribution_assumptions": [], "stationarity": [], "independence_of_variables": []},
-    "software_framework_and_version": {"pytorch_version": [], "tensorflow_version": [], "scikit_learn_version": [], "cuda_toolkit_version": []},
-    
-    # Datasets
-    "dataset_statistics": {"total_samples": [], "class_distribution": [], "missing_values_percentage": [], "feature_dimensions": []},
-    "study_cohort_description": {"demographics": [], "inclusion_criteria": [], "exclusion_criteria": [], "population_size": []},
-    "dataset_citations": {"bibtex_entry": [], "doi": [], "source_url": [], "license_type": []},
-    "data_collection_process": {"sampling_frequency": [], "survey_methodology": [], "raw_data_cleaning": [], "human_expert_review": []},
-    "experimental_setup_and_devices": {"sensor_model": [], "camera_specifications": [], "environment_conditions": [], "calibration_steps": []},
-    "data_acquisition_parameters": {"sampling_rate": [], "resolution": [], "exposure_time": [], "bit_depth": []},
-    "annotation_instructions": {"labeling_guidelines": [], "annotator_background": [], "consensus_protocol": [], "inter_rater_reliability": []},
-    "quality_control_methods": {"outlier_detection": [], "manual_audit": [], "cross_validation_of_labels": [], "automated_checks": []},
-    "dataset_availability_link": {"zenodo_link": [], "huggingface_hub": [], "kaggle_url": [], "institutional_repo": []},
-    "ethics_approval": {"irb_number": [], "consent_forms": [], "data_anonymization_protocol": [], "ethical_committee_name": []},
-    
-    # Code
-    "dependencies_specification": {"requirements_txt": [], "conda_yaml": [], "dockerfile": [], "pip_freeze_list": []},
-    "training_code": {"train_py": [], "fit_method": [], "gradient_descent_loop": [], "checkpoint_saving": []},
-    "evaluation_code": {"test_py": [], "inference_script": [], "scoring_functions": [], "cross_val_script": []},
-    "pretrained_models": {"model_weights_pth": [], "h5_files": [], "onnx_export": [], "checkpoints_folder": []},
-    "run_commands_and_readme": {"usage_instructions": [], "bash_scripts": [], "cli_arguments": [], "reproducibility_log": []},
-    
-    # Experimental Results
-    "hyperparameter_search_and_config": {"learning_rate": [], "batch_size": [], "grid_search_space": [], "optuna_study": [], "optimizer_config": []},
-    "parameter_sensitivity_analysis": {"ablation_study": [], "perturbation_tests": [], "robustness_checks": [], "variance_analysis": []},
-    "training_and_evaluation_runs_count": {"epochs_count": [], "random_seeds": [], "early_stopping_patience": [], "n_iterations": []},
-    "baseline_implementation_details": {"sota_comparisons": [], "vanilla_model_config": [], "reimplemented_methods": [], "default_parameters": []},
-    "data_splits_definition": {"train_test_ratio": [], "stratification_method": [], "k_fold_n": [], "validation_set_size": []},
-    "evaluation_metrics_and_statistics": {"f1_score": [], "accuracy_top_1": [], "rmse": [], "p_value_threshold": [], "confidence_intervals": []},
-    "central_tendency_and_variation": {"mean_results": [], "standard_deviation": [], "median_values": [], "error_bars_values": []},
-    "statistical_significance_analysis": {"t_test_results": [], "wilcoxon_rank_sum": [], "anova_table": [], "bonferroni_correction": []},
-    "runtime_and_energy_cost": {"training_time_hours": [], "inference_latency_ms": [], "gpu_wattage": [], "carbon_footprint_estimate": []},
-    "memory_footprint": {"peak_vram_usage": [], "ram_allocation_gb": [], "model_size_mb": [], "disk_space_required": []},
-    "failure_analysis": {"edge_cases": [], "misclassified_examples": [], "limitations_discussion": [], "out_of_distribution_behavior": []},
-    "computing_infrastructure": {"gpu_model_v100_a100": [], "cpu_specs": [], "os_version": [], "cloud_provider": []},
-    "clinical_significance_discussion": {"p_value_vs_clinical_relevance": [], "real_world_impact": [], "patient_outcomes": [], "diagnostic_accuracy": []},
-    "missing_values": []
-}
-
-reproducibility_mapping = {
-    # Models and Algorithms
-    "mathematical_setting": {"objective_function": [], "loss_equations": [], "optimization_space": [], "variables_definition": []},
-    "algorithm_description": {"pseudocode": [], "architecture_layers": [], "update_rules": [], "convergence_criteria": []},
-    "model_assumptions": {"linearity_constraints": [], "distribution_assumptions": [], "stationarity": [], "independence_of_variables": []},
-    "software_framework_and_version": {"pytorch_version": [], "tensorflow_version": [], "scikit_learn_version": [], "cuda_toolkit_version": []},
-    
-    # Datasets
-    "dataset_statistics": {"total_samples": [], "class_distribution": [], "missing_values_percentage": [], "feature_dimensions": []},
-    "study_cohort_description": {"demographics": [], "inclusion_criteria": [], "exclusion_criteria": [], "population_size": []},
-    "dataset_citations": {"bibtex_entry": [], "doi": [], "source_url": [], "license_type": []},
-    "data_collection_process": {"sampling_frequency": [], "survey_methodology": [], "raw_data_cleaning": [], "human_expert_review": []},
-    "experimental_setup_and_devices": {"sensor_model": [], "camera_specifications": [], "environment_conditions": [], "calibration_steps": []},
-    "data_acquisition_parameters": {"sampling_rate": [], "resolution": [], "exposure_time": [], "bit_depth": []},
-    "annotation_instructions": {"labeling_guidelines": [], "annotator_background": [], "consensus_protocol": [], "inter_rater_reliability": []},
-    "quality_control_methods": {"outlier_detection": [], "manual_audit": [], "cross_validation_of_labels": [], "automated_checks": []},
-    "dataset_availability_link": {"zenodo_link": [], "huggingface_hub": [], "kaggle_url": [], "institutional_repo": []},
-    "ethics_approval": {"irb_number": [], "consent_forms": [], "data_anonymization_protocol": [], "ethical_committee_name": []},
-    
-    # Code
-    "dependencies_specification": {"requirements_txt": [], "conda_yaml": [], "dockerfile": [], "pip_freeze_list": []},
-    "training_code": {"train_py": [], "fit_method": [], "gradient_descent_loop": [], "checkpoint_saving": []},
-    "evaluation_code": {"test_py": [], "inference_script": [], "scoring_functions": [], "cross_val_script": []},
-    "pretrained_models": {"model_weights_pth": [], "h5_files": [], "onnx_export": [], "checkpoints_folder": []},
-    "run_commands_and_readme": {"usage_instructions": [], "bash_scripts": [], "cli_arguments": [], "reproducibility_log": []},
-    
-    # Experimental Results
-    "hyperparameter_search_and_config": {"learning_rate": [], "batch_size": []},
-    "parameter_sensitivity_analysis": {"ablation_study": [], "perturbation_tests": [], "variance_analysis": []},
-    "training_and_evaluation_runs_count": {"epochs_count": [], "random_seeds": [], "n_iterations": []},
-    "baseline_implementation_details": {"sota_comparisons": [], "vanilla_model_config": [], "reimplemented_methods": [], "default_parameters": []},
-    "data_splits_definition": {"train_test_ratio": [], "stratification_method": [], "k_fold_n": [], "validation_set_size": []},
-    "evaluation_metrics_and_statistics": {"metrics_used": [], "confidence_intervals": []},
-    "central_tendency_and_variation": {"mean_results": [], "standard_deviation": [], "median_values": [], "error_bars_values": []},
-    "statistical_significance_analysis": {"t_test_results": [], "wilcoxon_rank_sum": [], "anova_table": [], "bonferroni_correction": []},
-    "runtime_and_energy_cost": {"training_time_hours": [], "inference_latency_ms": [], "gpu_wattage": [], "carbon_footprint_estimate": []},
-    "memory_footprint": {"peak_vram_usage": [], "ram_allocation_gb": [], "model_size_mb": [], "disk_space_required": []},
-    "failure_analysis": {"edge_cases": [], "misclassified_examples": [], "limitations_discussion": [], "out_of_distribution_behavior": []},
-    "computing_infrastructure": {"gpu_model_v100_a100": [], "cpu_specs": [], "os_version": [], "cloud_provider": []},
-    "clinical_significance_discussion": {"p_value_vs_clinical_relevance": [], "real_world_impact": [], "patient_outcomes": [], "diagnostic_accuracy": []},
-    "missing_values": []
-}
+evaluation_metrics -> lista di metriche
+statistical_significance_analysis -> lista di statistiche utilizzate
+failure_analysis -> dove fallisce il modello/soluzione
+pretrained_models -> weights/checkpoints
+run_commands_and_readme -> documentaiozione
 
 reproducibility_framework = {
     # Models and Algorithms
     "models_and_algorithms": {
-        "mathematical_setting": [],
-        "algorithm_description": [],
-        "model_assumptions": [],
-        "software_framework_and_version": []
+        "mathematical_setting": {
+            "objective_function": True/False, 
+            "loss_formulation": True/False, 
+            "optimization_constraints": True/False, 
+            "variable_definitions": True/False,
+            "model_assumptions": ["Explicit", "Implicit", "Missing"], # è possibile valutarle in modo più dettagliato? Spesso non sono implicite nell'architettura che viene presentata?
+        },
+        "algorithm_description": {
+            "pseudocode": True/False, *
+            "architecture_diagrams": ???, #come poter far capire all'llm se c'è o meno? 
+            "update_rules": True/False, 
+            "convergence_criteria": True/False
+        },
     },
     
     # Datasets
     "datasets": {
-        "dataset_statistics": [],
-        "study_cohort_description": [],
-        "dataset_citations": [],
-        "data_collection_process": [],
-        "experimental_setup_and_devices": [],
-        "data_acquisition_parameters": [],
+        "dataset_statistics": {
+            "sample_counts": True/False, 
+            "class_balance_distribution": ["Balanced", "Slight Imbalance", "Severe Imbalance", "Not Reported"], 
+            "missing_data_rates": True/False, 
+            "feature_dimensionality": True/False,
+            "data_leakage": ["Checked & Mitigated", "Potential Risk", "Not Discussed"]
+        },
+        "study_cohort_description": {
+            "demographics": ["Full", "Partial", "Missing"], 
+            "inclusion_criteria": True/False, 
+            "exclusion_criteria": True/False, 
+            "population_size": True/False
+        },
+        "dataset_metadata": {
+            "citations_and_doi": True/False, 
+            "source_url": ["Public", "Request-only", "Private", "Broken Link"], 
+            "license_type": ["Open", "Academic-Only", "Proprietary", "Unknown"], # Può bastare un True/False?
+            "versioning": True/False
+        },
+        "data_collection_process": {
+            "data_source": True/False,
+            "sampling_methodology": True/False, 
+            "temporal_period": True/False,
+            "survey_design": True/False, 
+            "cleaning_preprocessing": True/False, 
+            "expert_review_process": True/False
+        },
+        "acquisition_setup": {
+            "device_specifications": ["Multiple Vendors", "Multiple Devices", "Single Device", "Unknown"], 
+            "environmental_conditions": True/False, 
+            "calibration_procedures": True/False, 
+            "acquisition_parameters": True/False # generalization of sampling_rate, exposure, etc.
+        },
         "subjects_objects_involved": [],
-        "annotation_instructions": [],
-        "quality_control_methods": [],
-        "dataset_availability_link": [],
-        "ethics_approval": []
+        "annotation_instructions": {
+            "labeling_guidelines": True/False, 
+            "annotator_expertise": ["Expert", "Trained", "Crowd", "Algorithm"],
+            "consensus_protocols": True/False, 
+            "inter_rater_reliability_score": ["Strong", "Weak", "Not Reported"]
+        },
+        "quality_control": {
+            "outlier_detection_methods": True/False, 
+            "manual_audits": True/False, ??
+            "validation_checks": True/False, ??
+            "automated_filtering": True/False, ??
+            "bias_analysis": True/False
+        },
+        "availability_and_ethics": {
+            "repository_links": True/False, 
+            "access_permissions": True/False, 
+            "ethics_approval_id": ["Provided", "Generic statement", "Missing", "Not Applicable"], 
+            "anonymization_protocol": True/False
+        },
     },
     
     # Code
     "code_artifacts": {
-        "dependencies_specification": [],
-        "docker_file": [],
-        "training_code": [],
-        "evaluation_code": [],
-        "pretrained_models": [],
-        "preprocessing_details": [],
-        "dataset_access_integration": [],
-        "run_commands_and_readme": []
+        "environment_setup": {
+            "libraries_used": ["Full", "Partial", "Missing"],
+            "version_numbers": ["Full", "Partial", "Missing"],
+            "container_definitions": ["Full", "Partial", "Missing", "Not Applicable"],
+            "os_requirements": ["Full", "Partial", "Missing", "Not Applicable"],
+            "cuda_or_backend_info": True/False,
+            "random_state_seeding": ["Full", "Partial", "Missing", "Not Applicable"]
+        },
+        "implementation_scripts": {
+            "script_setup": True/False,
+            "training_logic": True/False, 
+            "inference_logic": True/False, 
+            "preprocessing_details": ["Full", "Partial", "Missing", "Not Applicable"]
+        },
+         "reproducibility_artifacts": {
+            "checkpoints": True/False, 
+            "configuration_files": ["Full", "Partial", "Missing", "Not Applicable"], 
+            "logging_outputs": ["Full", "Partial", "Missing", "Not Applicable"],
+            "documentation": ["Full", "Partial", "Missing"]
+        },
+        "code_availability": {
+            "repository_link_status": ["Active/Public", "Broken", "Request Access", "None"],
+            "training_script": True/False,
+            "evaluation_script": True/False,
+            "checkpoints": True/False,
+            "preprocessing_details": ["Full", "Partial", "Missing", "Not Applicable"],
+            "logging_outputs": ["Full", "Partial", "Missing", "Not Applicable"],
+            "readme_quality": ["Full", "Partial", "None"] 
+        }
     },
     
     # Experimental Results
     "experimental_results": {
-        "hyperparameter_search_and_config": [],
-        "parameter_sensitivity_analysis": [],
+        "hyperparameters": {
+            "optimization_parameters": ,
+            "batch_sizes": True/False, 
+            "search_strategy": True/False,
+            "architectural_hyperparams": [*hyperparameters list*]
+        },
+        "sensitivity_analysis": {
+            "ablation_studies": True/False, 
+            "perturbation_tests": True/False, 
+            "evaluation_metrics": [*metrics list*],
+            "statistical_analysis": [*statistics list*],
+    },
         "training_and_evaluation_runs_count": [],
-        "baseline_implementation_details": [],
-        "data_splits_definition": [],
-        "evaluation_metrics_and_statistics": [],
-        "central_tendency_and_variation": [],
-        "statistical_significance_analysis": [],
-        "runtime_and_energy_cost": [],
-        "memory_footprint": [],
-        "failure_analysis": [],
-        "computing_infrastructure": [],
-        "clinical_significance_discussion": []
+        "baseline_implementation_details": ["Full", "Partial", "Missing", "Not Applicable"],
+        "data_splits_definition": True/False,
+        
+        
+        "central_tendency_and_variation": True/False,
+        "runtime_and_energy_cost": True/False,
+        "memory_footprint": True/False,
+        "failure_analysis": True/False,
+        "computing_infrastructure": True/False,
+        "clinical_significance_discussion": True/false
     },
 
     "missing_candidates": []

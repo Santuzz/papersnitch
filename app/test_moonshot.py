@@ -2,6 +2,7 @@ import json
 import os
 import sys
 from pathlib import Path
+import re
 
 from litellm import FileObject
 import requests
@@ -237,6 +238,116 @@ def retrieve_file(client: OpenAI, filename: str) -> str:
     # 3. Retrieve content using the file_id (whether new or existing)
     file_content = client.files.content(file_id=file_id).text
     return file_content
+
+
+def from_doc_to_code(doc_text: str, url: str) -> list[str]:
+    """Extract all code files from a document text.
+    This function its designed to be used in the initial stage of the code analysis pipeline,
+    to get the subset of the entire repository useful to evaluate the reproducibility of the paper
+    Args:
+        doc_text: The documentation text extracted from the code repository.
+        url: URL of the code repository.
+    Returns:
+        List of all code files path found in the document text.
+    """
+    # Step 1: Parse GitHub URL to extract owner and repo name
+    github_pattern = re.compile(
+        r"https?://(?:www\.)?github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)"
+    )
+    match = github_pattern.match(url.rstrip("/"))
+    if not match:
+        return []
+
+    owner, repo = match.groups()
+    # Remove .git suffix if present
+    repo = repo.removesuffix(".git")
+
+    # Step 2: Fetch repository tree using GitHub API
+    api_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/main?recursive=1"
+    headers = {"Accept": "application/vnd.github.v3+json"}
+
+    # Try main branch first, then master
+    response = requests.get(api_url, headers=headers, timeout=30)
+    if response.status_code != 200:
+        api_url = (
+            f"https://api.github.com/repos/{owner}/{repo}/git/trees/master?recursive=1"
+        )
+        response = requests.get(api_url, headers=headers, timeout=30)
+        if response.status_code != 200:
+            print(f"Error fetching repository tree:{response.status_code}")
+            return []
+
+    tree_data = response.json()
+    if "tree" not in tree_data:
+        return []
+
+    # Build a set of all file paths in the repository
+    repo_files = {item["path"] for item in tree_data["tree"] if item["type"] == "blob"}
+
+    # Also build a mapping of filename -> list of full paths for quick lookup
+    filename_to_paths: dict[str, list[str]] = {}
+    for filepath in repo_files:
+        filename = Path(filepath).name
+        if filename not in filename_to_paths:
+            filename_to_paths[filename] = []
+        filename_to_paths[filename].append(filepath)
+
+    # Step 3: Extract filenames mentioned in doc_text
+    # Pattern to match common code file references
+    # Matches: file.py, path/to/file.py, `file.py`, "file.py", 'file.py'
+    file_patterns = [
+        # Match paths with extensions (e.g., src/main.py, utils/helper.js)
+        r"(?:[\w./\\-]+/)?[\w.-]+\.(?:py|js|ts|sh|yaml|yml|json|toml|cfg|ini)",
+        # Match backtick-quoted filenames
+        r"`([\w./\\-]+\.(?:py|js|ts|sh|yaml|yml|json|toml|cfg|ini))`",
+        # Match quoted filenames
+        r'["\']([\w./\\-]+\.(?:py|js|ts|sh|yaml|yml|json|toml|cfg|ini))["\']',
+    ]
+
+    found_files = set()
+    for pattern in file_patterns:
+        matches = re.findall(pattern, doc_text, re.IGNORECASE)
+        for match in matches:
+            # Clean up the match
+            cleaned = match.strip("`\"'").strip()
+            if cleaned:
+                found_files.add(cleaned)
+
+    # Step 4: Resolve found filenames to absolute paths in the repository
+    resolved_paths = []
+    for found_file in found_files:
+        # Check if it's already a full path in the repo
+        if found_file in repo_files:
+            resolved_paths.append(found_file)
+            continue
+
+        # Try to match just the filename
+        filename = Path(found_file).name
+        if filename in filename_to_paths:
+            # If found_file contains a partial path, try to match it
+            if "/" in found_file or "\\" in found_file:
+                # Normalize the path
+                normalized = found_file.replace("\\", "/")
+                for full_path in filename_to_paths[filename]:
+                    if full_path.endswith(normalized):
+                        resolved_paths.append(full_path)
+                        break
+                else:
+                    # If no exact suffix match, add all matching filenames
+                    resolved_paths.extend(filename_to_paths[filename])
+            else:
+                # Just a filename, add all matching paths
+                resolved_paths.extend(filename_to_paths[filename])
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_paths = []
+    for path in resolved_paths:
+        if path not in seen:
+            seen.add(path)
+            unique_paths.append(path)
+    print(unique_paths)
+    return unique_paths
 
 
 def main():
@@ -493,8 +604,23 @@ def check_balance():
 
 if __name__ == "__main__":
     # main()
-    fill_evidence_locator()
+    # fill_evidence_locator()
     # print(check_balance())
+    from gitingest import ingest
+
+    url = "/home/dsantoli/papersnitch/IM-Fuse"
+    _, _, content = ingest(
+        url,
+        include_patterns=["*.md"],
+    )
+    code_filenames = from_doc_to_code(
+        content, "https://github.com/AImageLab-zip/IM-Fuse"
+    )
+    summary, _, content = ingest(
+        url,
+        include_patterns=code_filenames,
+    )
+    print(summary)
 
 # ChatCompletion(
 #     id="chatcmpl-6970e9201eda4bf7387410e3",
@@ -545,133 +671,3 @@ if __name__ == "__main__":
 # Token: 1     | Logprob: -6.4111    | Prob:   0.16%
 
 # The paper provides a clear statement that the experiments were carried out on the BraTS 2023 dataset, explicitly citing the reference [2] (Baid et al., LNCS 14669, 2023) and giving the total number of samples (1,251 volumes). It also contrasts this with the older BraTS 2018 set (285 volumes) to justify the new benchmark. The exact splitting strategy is spelled out: 70 % training, 10 % validation, 20 % test. The authors further state that the same preprocessing and augmentation pipeline used in mmFormer [38] was adopted, and they explicitly mention that the data-split files are publicly released at the provided GitHub URL. These elements satisfy the core requirements of origin, size, and split definition What is missing are finer-grained dataset statistics and leakage safeguards. No table or paragraph summarises class balance (e.g., how many voxels or slices belong to edema, enhancing tumour, necrosis), patient-wise or subject-wise splitting is not asserted, and there is no explicit confirmation that all slices of a single patient are confined to one split. While the citation of BraTS 2023 implies that the imaging format is standard 3-D MRI with four modalities (FLAIR, T1, T1c, T2), the manuscript never states the voxel spacing, in-plane resolution, or whether any cases were excluded after quality control. Finally, no version number or checksum for the BraTS 2023 release is given, so a future researcher cannot be certain they are downloading the identical set In summary, the paper gives enough information to roughly reproduce the train/val/test split and to locate the dataset, but the absence of detailed class distributions, patient-wise split confirmation, and precise versioning leaves room for subtle mismatch or leakage that could hinder exact reproduction.
-
-
-{
-    "models_and_algorithms": {
-        "mathematical_setting": [
-            "State-Space Model (SSM) is a mathematical framework used to represent dynamic systems wherein the input is mapped to an output with the same dimensionality through an N-dimensional latent state.",
-            "The Mamba architecture builds on structured SSMs to manage long sequences effectively, imposing a structured constraint on its state transition matrix following the HiPPO theory [11] to boost memory retention and using a selection mechanism to focus on the most relevant information.",
-            "This enhancement, combined with an efficient hardware-aware parallel algorithm, makes Mamba well-suited for effective and computationally efficient long-sequence modeling, with subquadratic complexity, by selectively propagating or discarding information along the sequence in an input-dependent manner.",
-        ],
-        "algorithm_description": [
-            "Our proposal leverages hybrid modality-specific encoders to extract representations from each modality, Mamba to integrate multimodal features, a multimodal Transformer to capture long-range dependencies, and a convolutional decoder for reconstruction (Fig.1a).",
-            "The encoder-decoder structure follows 3D U-Net [8].",
-            "Thus, in this work, we introduce the Mamba Fusion Block (MFB), which accepts as input the tensors corresponding to the tokenized embeddings of the image modalities, each of dimensionality R^(P^3×C), and produces an output F_fused_i ∈ R^(P^3×C) that represents the fused representation.",
-            "In order to address this issue, we propose an interleaved concatenation strategy that gives rise to the Interleaved Mamba Fusion Block (I-MFB), wherein the modality tokens and learnable parameters are arranged alternately (Fig.1c).",
-        ],
-        "model_assumptions": [
-            "Following [38], we introduce a Bernoulli indicator δ_m ∈ {0,1} to simulate missing modalities during training. It is set to one if the modality m is present, zero otherwise."
-        ],
-        "software_framework_and_version": [
-            "Our method was implemented using Torch 2.5, and all models were trained on NVIDIA L40S GPUs with 48GB of memory each."
-        ],
-    },
-    "datasets": {
-        "dataset_statistics": [
-            "BraTS2023, which includes 1,251 volumes",
-            "BraTS2018, which comprises only 285 volumes",
-            "We split the dataset5 into 70% for training, 10% for validation, and 20% for testing",
-        ],
-        "study_cohort_description": [
-            "Brain tumor segmentation is a crucial task in medical imaging that involves the integrated modeling of four distinct imaging modalities to identify tumor regions accurately.",
-            "The current gold standard for clinical imaging diagnosis of brain tumors is multi-parametric Magnetic Resonance Imaging (MRI)[14], which is critical for accurate delineation and volume quantification, therapy planning, and follow-up [3].",
-            "Usually, four modalities providing complementary information and supporting tumor sub-region analysis are employed: FLuid-Attenuated Inversion Recovery (FLAIR), T1-weighted images (T1), T1-weighted images with contrast enhancement (T1c) and T2-weighted images (T2).",
-        ],
-        "dataset_citations": [
-            "We retrained and compared the most prominent methods for brain tumor segmentation under missing modalities conditions, including U-HVED, RobustSeg, mmFormer, SFusion, ShaSpec, M^3AE, and M^3FeCon, alongside our proposed IM-Fuse, using the BraTS2023 dataset[2]."
-        ],
-        "data_collection_process": [],
-        "experimental_setup_and_devices": [
-            "all models were trained on NVIDIA L40S GPUs with 48GB of memory each."
-        ],
-        "data_acquisition_parameters": [
-            "The input dimensions for each image modality were set to 128× 128× 128 voxels"
-        ],
-        "subjects_objects_involved": [
-            "brain tumors",
-            "each modality-specific image as X_m ∈ R^(H×W×D)",
-        ],
-        "annotation_instructions": [],
-        "quality_control_methods": [],
-        "dataset_availability_link": [
-            "5Data splits are available at https://github.com/AImageLab-zip/IM-Fuse."
-        ],
-        "ethics_approval": [],
-    },
-    "code_artifacts": {
-        "dependencies_specification": [],
-        "docker_file": [],
-        "training_code": [
-            "We train our model for 1,000 epochs.",
-            "the batch size was fixed at 2.",
-            "The RAdam optimizer was employed, and a learning rate scheduler that progressively multiplies the learning rate by (1−epoch/max_epoch)^0.9 during training, starting with an initial learning rate of 2×10^−4.",
-        ],
-        "evaluation_code": [
-            "for each model, we evaluated on the test set the version that achieved the highest metric on the validation set"
-        ],
-        "pretrained_models": [],
-        "preprocessing_details": [
-            "The preprocessing and data augmentation pipeline was identical to that utilized by mmFormer [38]."
-        ],
-        "dataset_access_integration": [
-            "5Data splits are available at https://github.com/AImageLab-zip/IM-Fuse.",
-            "The source code is publicly released alongside the benchmark developed for the evaluation",
-        ],
-        "run_commands_and_readme": [],
-    },
-    "experimental_results": {
-        "hyperparameter_search_and_config": [
-            "initial learning rate of 2×10^−4",
-            "RAdam optimizer was employed",
-            "learning rate scheduler that progressively multiplies the learning rate by (1−epoch/max_epoch)^0.9 during training",
-            "batch size was fixed at 2",
-            "We train our model for 1,000 epochs",
-        ],
-        "parameter_sensitivity_analysis": [
-            "To demonstrate the effectiveness of the placement and design of I-MFB, we compared four different configurations on BraTS2023: I-MFB against MFB, each applied only in the bottleneck or in both bottleneck and skip connections."
-        ],
-        "training_and_evaluation_runs_count": [],
-        "baseline_implementation_details": [
-            "We retrained and compared the most prominent methods for brain tumor segmentation under missing modalities conditions, including U-HVED, RobustSeg, mmFormer, SFusion, ShaSpec, M^3AE, and M^3FeCon, alongside our proposed IM-Fuse, using the BraTS2023 dataset.",
-            "For each model, we employed the same preprocessing, augmentation, optimizer, scheduler, and hyperparameters as described in their respective original papers, with the exception of the number of iterations, which were scaled to ensure an equivalent number of epochs as in the original studies due to the increased number of training samples.",
-        ],
-        "data_splits_definition": [
-            "We split the dataset5 into 70% for training, 10% for validation, and 20% for testing"
-        ],
-        "evaluation_metrics_and_statistics": [
-            "DSC%(↑)comparison across different missing modalities on BraTS2023[2].",
-            "where L is jointly the Dice loss and weighted cross-entropy loss to handle the unbalanced object sizes in multi-class segmentation.",
-        ],
-        "central_tendency_and_variation": [
-            "Results indicate that our proposed method, IM-Fuse, surpasses state-of-the-art architectures while maintaining an average computational complexity and parameter count contained, as illustrated in Fig.2.",
-            "All models achieved an average improvement of 8 Dice points by training on BraTS2023 compared to the performance obtained with BraTS2018[28,31,38].",
-        ],
-        "statistical_significance_analysis": [],
-        "runtime_and_energy_cost": [],
-        "memory_footprint": [],
-        "failure_analysis": [],
-        "computing_infrastructure": [
-            "all models were trained on NVIDIA L40S GPUs with 48GB of memory each"
-        ],
-        "clinical_significance_discussion": [
-            "Brain tumor segmentation is a crucial task in medical imaging that involves the integrated modeling of four distinct imaging modalities to identify tumor regions accurately.",
-            "critical for accurate delineation and volume quantification, therapy planning, and follow-up [3]",
-        ],
-    },
-    "missing_candidates": [
-        "datasets:data_collection_process",
-        "datasets:annotation_instructions",
-        "datasets:quality_control_methods",
-        "datasets:ethics_approval",
-        "code_artifacts:dependencies_specification",
-        "code_artifacts:docker_file",
-        "code_artifacts:pretrained_models",
-        "code_artifacts:run_commands_and_readme",
-        "experimental_results:training_and_evaluation_runs_count",
-        "experimental_results:statistical_significance_analysis",
-        "experimental_results:runtime_and_energy_cost",
-        "experimental_results:memory_footprint",
-        "experimental_results:failure_analysis",
-    ],
-}
