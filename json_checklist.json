@@ -1,0 +1,295 @@
+[
+  {
+    "models_and_algorithms": {
+      "mathematical_setting": {
+        "objective_function": true,
+        "loss_formulation": false,
+        "optimization_constraints": false,
+        "variable_definitions": true,
+        "model_assumptions": false
+      },
+      "algorithm_description": {
+        "pseudocode": false,
+        "architecture_diagrams": true,
+        "update_rules": true,
+        "convergence_criteria": false
+      }
+    },
+    "datasets": {
+      "dataset_statistics": {
+        "sample_counts": true,
+        "class_balance_distribution": "Not Reported",
+        "missing_data_rates": false,
+        "feature_dimensionality": true,
+        "data_leakage": "Not Discussed"
+      },
+      "study_cohort_description": {
+        "sample_taxonomy": true,
+        "inclusion_criteria": false,
+        "exclusion_criteria": false,
+        "population_size": true
+      },
+      "dataset_metadata": {
+        "citations_and_doi": true,
+        "source_url": "Public",
+        "license_type": "Proprietary",
+        "versioning": false
+      },
+      "data_collection_process": {
+        "data_source": true,
+        "sampling_methodology": false,
+        "temporal_period": false,
+        "survey_design": false,
+        "cleaning_preprocessing": true,
+        "expert_review_process": true
+      },
+      "acquisition_setup": {
+        "device_specifications": "Unknown",
+        "environmental_conditions": false,
+        "calibration_procedures": false,
+        "acquisition_parameters": true
+      },
+      "annotation_instructions": {
+        "labeling_guidelines": false,
+        "annotator_expertise": "Expert",
+        "consensus_protocols": false,
+        "inter_rater_reliability_score": "Not Reported"
+      },
+      "quality_control": {
+        "outlier_detection_methods": false,
+        "manual_audits": true,
+        "validation_checks": false,
+        "automated_filtering": false,
+        "bias_analysis": false
+      },
+      "availability_and_ethics": {
+        "repository_links": false,
+        "access_permissions": false,
+        "ethics_approval_id": "Missing",
+        "anonymization_protocol": false
+      }
+    },
+    "code_artifacts": {
+      "environment_setup": {
+        "libraries_used": "Missing",
+        "version_numbers": "Missing",
+        "container_definitions": "Missing",
+        "os_requirements": "Missing",
+        "cuda_or_backend_info": false,
+        "random_state_seeding": "Missing"
+      },
+      "implementation_scripts": {
+        "script_setup": false,
+        "training_logic": true,
+        "inference_logic": true,
+        "preprocessing_details": "Partial"
+      },
+      "reproducibility_artifacts": {
+        "checkpoints": false,
+        "configuration_files": "Missing",
+        "logging_outputs": "Missing",
+        "documentation": "Missing"
+      },
+      "code_availability": {
+        "repository_link_status": ["Active/Public"],
+        "training_script": false,
+        "evaluation_script": false,
+        "checkpoints": false,
+        "preprocessing_details": "Partial",
+        "logging_outputs": "Missing",
+        "readme_quality": "None",
+        "license_type": "Proprietary"
+      }
+    },
+    "experimental_results": {
+      "experimental_setup": {
+        "architectural_hyperparams": [
+          "four Spatio Temporal Attention Layers",
+          "four Text Condition Token Attention layers",
+          "eight attention heads",
+          "k = 1024",
+          "hidden size of 768",
+          "1B parameters"
+        ],
+        "optimization_parameters": ["supervised fine-tuning (SFT)", "Direct Preference Optimization(DPO)", "optimize our model on GREEN Score"],
+        "best_hyperparameters_selection_method": false,
+        "hyperparameters_ranges": "Partial",
+        "batch_sizes": false,
+        "search_strategy": false,
+        "baseline_implementation": true,
+        "baseline_tuning": false
+      },
+      "quantitative_analysis": {
+        "training_and_evaluation_runs_count": false,
+        "ablation_studies": "Full",
+        "evaluation_metrics": ["BLEU", "ROUGE", "METEOR", "BERT-Score", "GREEN", "ROUGE-1"],
+        "data_splits_definition": false,
+        "sota_comparisons": true,
+        "statistical_measures": [],
+        "central_tendency_measures": false,
+        "dispersion_measures": false,
+        "significance_tests": false,
+        "confidence_intervals": false,
+        "sensitivity_analysis": false
+      },
+      "qualitative_analysis": {
+        "failure_analysis": false,
+        "perturbation_testing": false,
+        "out_of_distribution_testing": false,
+        "subgroup_fairness_analysis": false,
+        "clinical_significance_discussion": true,
+        "results_discussion": true
+      },
+      "compute_and_resources": {
+        "hardware_specification": false,
+        "environment_description": false,
+        "training_time": false,
+        "energy_cost_or_average_runtime": false,
+        "memory_usage": false
+      }
+    }
+  },
+  {
+    "models_and_algorithms": {
+      "mathematical_setting": {
+        "objective_function": true,
+        "loss_formulation": true,
+        "optimization_constraints": false,
+        "variable_definitions": true,
+        "model_assumptions": true
+      },
+      "algorithm_description": {
+        "pseudocode": false,
+        "architecture_diagrams": true,
+        "update_rules": true,
+        "convergence_criteria": false
+      }
+    },
+    "datasets": {
+      "dataset_statistics": {
+        "sample_counts": true,
+        "class_balance_distribution": "Not Reported",
+        "missing_data_rates": false,
+        "feature_dimensionality": true,
+        "data_leakage": "Not Discussed"
+      },
+      "study_cohort_description": {
+        "sample_taxonomy": true,
+        "inclusion_criteria": false,
+        "exclusion_criteria": false,
+        "population_size": true
+      },
+      "dataset_metadata": {
+        "citations_and_doi": true,
+        "source_url": "Public",
+        "license_type": "Proprietary",
+        "versioning": true
+      },
+      "data_collection_process": {
+        "data_source": true,
+        "sampling_methodology": false,
+        "temporal_period": false,
+        "survey_design": false,
+        "cleaning_preprocessing": true,
+        "expert_review_process": true
+      },
+      "acquisition_setup": {
+        "device_specifications": "Unknown",
+        "environmental_conditions": false,
+        "calibration_procedures": false,
+        "acquisition_parameters": true
+      },
+      "annotation_instructions": {
+        "labeling_guidelines": false,
+        "annotator_expertise": "Expert",
+        "consensus_protocols": false,
+        "inter_rater_reliability_score": "Not Reported"
+      },
+      "quality_control": {
+        "outlier_detection_methods": false,
+        "manual_audits": true,
+        "validation_checks": false,
+        "automated_filtering": false,
+        "bias_analysis": false
+      },
+      "availability_and_ethics": {
+        "repository_links": false,
+        "access_permissions": false,
+        "ethics_approval_id": "Missing",
+        "anonymization_protocol": false
+      }
+    },
+    "code_artifacts": {
+      "environment_setup": {
+        "libraries_used": "Partial",
+        "version_numbers": "Partial",
+        "container_definitions": "Missing",
+        "os_requirements": "Missing",
+        "cuda_or_backend_info": true,
+        "random_state_seeding": "Missing"
+      },
+      "implementation_scripts": {
+        "script_setup": false,
+        "training_logic": false,
+        "inference_logic": false,
+        "preprocessing_details": "Partial"
+      },
+      "reproducibility_artifacts": {
+        "checkpoints": true,
+        "configuration_files": "Missing",
+        "logging_outputs": "Missing",
+        "documentation": "Partial"
+      },
+      "code_availability": {
+        "repository_link_status": ["Active/Public"],
+        "training_script": false,
+        "evaluation_script": false,
+        "checkpoints": true,
+        "preprocessing_details": "Partial",
+        "logging_outputs": "Missing",
+        "readme_quality": "Partial",
+        "license_type": "MIT"
+      }
+    },
+    "experimental_results": {
+      "experimental_setup": {
+        "architectural_hyperparams": ["Spatio Temporal Attention Layers", "Text Condition Token Attention layers", "attention heads", "k", "embedding dimension", "hidden size", "queries"],
+        "optimization_parameters": ["AdamW", "warm-up", "cosine decay", "bf16", "mixed-precision"],
+        "best_hyperparameters_selection_method": false,
+        "hyperparameters_ranges": "Missing",
+        "batch_sizes": false,
+        "search_strategy": false,
+        "baseline_implementation": false,
+        "baseline_tuning": false
+      },
+      "quantitative_analysis": {
+        "training_and_evaluation_runs_count": false,
+        "ablation_studies": "Full",
+        "evaluation_metrics": ["BLEU", "ROUGE-1", "METEOR", "BERTScore", "GREEN"],
+        "data_splits_definition": false,
+        "sota_comparisons": true,
+        "statistical_measures": [],
+        "central_tendency_measures": true,
+        "dispersion_measures": false,
+        "significance_tests": false,
+        "confidence_intervals": false,
+        "sensitivity_analysis": false
+      },
+      "qualitative_analysis": {
+        "failure_analysis": false,
+        "perturbation_testing": false,
+        "out_of_distribution_testing": false,
+        "subgroup_fairness_analysis": false,
+        "clinical_significance_discussion": true,
+        "results_discussion": true
+      },
+      "compute_and_resources": {
+        "hardware_specification": true,
+        "environment_description": true,
+        "training_time": false,
+        "energy_cost_or_average_runtime": false,
+        "memory_usage": true
+      }
+    }
+  }
+]
