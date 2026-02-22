@@ -3,8 +3,10 @@ Generate bar chart showing code availability for MICCAI conferences by year.
 
 For each MICCAI conference edition, displays:
 - Total number of papers
-- Number of papers with GitHub link available (code_url)
-- Number of papers with actual code accessible (code_text or code embeddings)
+- Number of papers with GitHub link in database (code_url field)
+- Number of papers with verified, accessible code (from workflow verification)
+  * Verified means: URL is accessible (not 404), repository contains actual code files
+  * Excludes: empty repos, 404 links, repos with only docs/data
 """
 
 import os
@@ -19,6 +21,7 @@ django.setup()
 
 from django.db.models import Q, Count, Case, When, IntegerField
 from webApp.models import Paper, Conference, CodeFileEmbedding
+from workflow_engine.models import WorkflowRun, WorkflowNode, NodeArtifact
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
@@ -32,7 +35,13 @@ def get_miccai_statistics():
     Query database and compute statistics for MICCAI conferences.
     
     Returns:
-        List of tuples: (year, total_papers, with_github_link, with_actual_code)
+        List of tuples: (year, total_papers, with_github_link, with_verified_code)
+        
+    Note:
+        - with_github_link: Papers with code_url field populated
+        - with_verified_code: Papers where code_availability_check node verified:
+            * URL is accessible (not 404)
+            * Repository contains actual code files (not empty, not just docs)
     """
     # Get all MICCAI conferences
     miccai_conferences = Conference.objects.filter(
@@ -59,29 +68,49 @@ def get_miccai_statistics():
             code_url__isnull=False
         ).exclude(code_url='').count()
         
-        # Papers with actual code available
-        # Method 1: Check if code_text field has content
-        with_code_text = papers.filter(
-            code_text__isnull=False
-        ).exclude(code_text='').count()
+        # Papers with actual code verified (from workflow node results)
+        # This checks if code_availability_check node returned code_available=True
+        # which means: URL exists, is accessible (not 404), and contains actual code files
+        papers_with_verified_code = 0
+        papers_checked = 0
         
-        # Method 2: Check if code embeddings exist
-        paper_ids_with_embeddings = CodeFileEmbedding.objects.filter(
-            paper__conference=conference
-        ).values_list('paper_id', flat=True).distinct()
+        for paper in papers:
+            # Get latest completed workflow run for this paper
+            latest_run = WorkflowRun.objects.filter(
+                paper=paper,
+                status='completed'
+            ).order_by('-created_at').first()
+            
+            if latest_run:
+                # Get code_availability_check node
+                code_check_node = WorkflowNode.objects.filter(
+                    workflow_run=latest_run,
+                    node_id='code_availability_check',
+                    status='completed'
+                ).first()
+                
+                if code_check_node:
+                    papers_checked += 1
+                    # Get result artifact
+                    result_artifact = NodeArtifact.objects.filter(
+                        node=code_check_node,
+                        name='result'
+                    ).first()
+                    
+                    if result_artifact and result_artifact.inline_data:
+                        result = result_artifact.inline_data
+                        if result.get('code_available') == True:
+                            papers_with_verified_code += 1
         
-        with_code_embeddings = papers.filter(id__in=paper_ids_with_embeddings).count()
-        
-        # Use the maximum to avoid undercounting (some might have text, some embeddings)
-        with_actual_code = max(with_code_text, with_code_embeddings)
+        with_actual_code = papers_with_verified_code
         
         print(f"  {conference.name}")
         print(f"    Year: {year}")
         print(f"    Total papers: {total_papers}")
         print(f"    With GitHub link: {with_github_link} ({with_github_link/total_papers*100:.1f}%)")
-        print(f"    With actual code: {with_actual_code} ({with_actual_code/total_papers*100:.1f}%)")
-        print(f"      - With code_text: {with_code_text}")
-        print(f"      - With code embeddings: {with_code_embeddings}")
+        print(f"    With verified code: {with_actual_code} ({with_actual_code/total_papers*100:.1f}%)")
+        print(f"      - Papers checked by workflow: {papers_checked}")
+        print(f"      - Broken/empty links: {with_github_link - with_actual_code if papers_checked > 0 else 'N/A'}")
         print()
         
         stats.append((year, total_papers, with_github_link, with_actual_code))
@@ -94,7 +123,7 @@ def generate_bar_chart(stats, output_file='miccai_code_availability.png'):
     Generate grouped bar chart from statistics.
     
     Args:
-        stats: List of tuples (year, total_papers, with_github_link, with_actual_code)
+        stats: List of tuples (year, total_papers, with_github_link, with_verified_code)
         output_file: Path to save the chart image
     """
     if not stats:
@@ -163,12 +192,12 @@ def generate_summary_table(stats):
     Print a summary table to the console.
     
     Args:
-        stats: List of tuples (year, total_papers, with_github_link, with_actual_code)
+        stats: List of tuples (year, total_papers, with_github_link, with_verified_code)
     """
     print("\n" + "="*80)
     print("MICCAI CODE AVAILABILITY SUMMARY")
     print("="*80)
-    print(f"{'Year':<10} {'Total':>10} {'GitHub Link':>15} {'Actual Code':>15} {'Link %':>10} {'Code %':>10}")
+    print(f"{'Year':<10} {'Total':>10} {'GitHub Link':>15} {'Verified Code':>15} {'Link %':>10} {'Code %':>10}")
     print("-"*80)
     
     total_all = 0
