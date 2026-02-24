@@ -118,7 +118,7 @@ def get_miccai_statistics():
     return stats
 
 
-def generate_bar_chart(stats, output_file='miccai_code_availability.png'):
+def generate_bar_chart(stats, output_file='miccai_code_availability.pdf'):
     """
     Generate grouped bar chart from statistics.
     
@@ -147,33 +147,41 @@ def generate_bar_chart(stats, output_file='miccai_code_availability.png'):
                    color='#3498db', alpha=0.8)
     bars2 = ax.bar(x, with_github, width, label='With GitHub Link', 
                    color='#2ecc71', alpha=0.8)
-    bars3 = ax.bar(x + width, with_code, width, label='With Actual Code', 
+    bars3 = ax.bar(x + width, with_code, width, label='With Verified Code', 
                    color='#e74c3c', alpha=0.8)
     
-    # Customize chart
-    ax.set_xlabel('Year', fontsize=14, fontweight='bold')
-    ax.set_ylabel('Number of Papers', fontsize=14, fontweight='bold')
-    ax.set_title('MICCAI Code Availability by Year', fontsize=16, fontweight='bold', pad=20)
+    # Customize chart - enlarged fonts
+    ax.set_xlabel('Year', fontsize=18, fontweight='bold')
+    ax.set_ylabel('Number of Papers', fontsize=18, fontweight='bold')
+    ax.set_title('MICCAI Code Availability by Year', fontsize=20, fontweight='bold', pad=20)
     ax.set_xticks(x)
-    ax.set_xticklabels(years, fontsize=12)
-    ax.legend(fontsize=12, loc='upper left')
+    ax.set_xticklabels(years, fontsize=16)
+    ax.tick_params(axis='y', labelsize=16)
+    ax.legend(fontsize=16, loc='upper left')
     ax.grid(axis='y', alpha=0.3, linestyle='--')
     
-    # Add value labels on bars
-    def add_labels(bars):
-        for bar in bars:
+    # Add value labels on bars - enlarged with percentages
+    def add_labels(bars, totals=None):
+        for i, bar in enumerate(bars):
             height = bar.get_height()
             if height > 0:
-                ax.annotate(f'{int(height)}',
+                # If totals provided, calculate and show percentage
+                if totals:
+                    pct = (height / totals[i] * 100) if totals[i] > 0 else 0
+                    label = f'{int(height)}\n({pct:.1f}%)'
+                else:
+                    label = f'{int(height)}'
+                
+                ax.annotate(label,
                            xy=(bar.get_x() + bar.get_width() / 2, height),
                            xytext=(0, 3),  # 3 points vertical offset
                            textcoords="offset points",
                            ha='center', va='bottom',
-                           fontsize=9, fontweight='bold')
+                           fontsize=11, fontweight='bold')
     
-    add_labels(bars1)
-    add_labels(bars2)
-    add_labels(bars3)
+    add_labels(bars1)  # Total papers - no percentage
+    add_labels(bars2, total_papers)  # GitHub links with percentage
+    add_labels(bars3, total_papers)  # Verified code with percentage
     
     # Adjust layout and save
     plt.tight_layout()
