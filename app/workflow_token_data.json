@@ -1,0 +1,982 @@
+{
+  "workflow_definition": {
+    "id": "ec85a291-7437-4ec2-bbd5-819c8047aa89",
+    "name": "paper_processing_with_reproducibility",
+    "version": 8
+  },
+  "node_groups": {
+    "paper": [
+      "paper_type_classification",
+      "section_embeddings",
+      "reproducibility_checklist",
+      "final_aggregation"
+    ],
+    "code": [
+      "code_embedding",
+      "code_repository_analysis"
+    ],
+    "dataset": [
+      "dataset_documentation_check"
+    ]
+  },
+  "papers": [
+    {
+      "paper_id": "2660",
+      "paper_title": "3D Acetabular Surface Reconstruction from 2D Pre-operative X-ray Images using SRVF Elastic Registration and Deformation Graph",
+      "workflow_run_id": "c72155cf-1129-446f-92a8-993d910408b8",
+      "run_number": 1,
+      "status": "failed",
+      "created_at": "2026-02-26T19:50:59.029697+00:00",
+      "started_at": "2026-02-26T19:50:59.072756+00:00",
+      "completed_at": "2026-02-26T19:51:16.173096+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 4994,
+          "output_tokens": 0,
+          "total_tokens": 4994,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "failed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 4994,
+              "output_tokens": 0,
+              "total_tokens": 4994,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "failed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "pending",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "pending",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "pending",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "failed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "430",
+      "paper_title": "Hierarchical Corpus-View-Category Refinement for Carotid Plaque Risk Grading in Ultrasound",
+      "workflow_run_id": "d19857bb-bfed-4851-83ac-b1e3afbab8cb",
+      "run_number": 1,
+      "status": "failed",
+      "created_at": "2026-02-26T20:15:53.480725+00:00",
+      "started_at": "2026-02-26T20:15:53.522868+00:00",
+      "completed_at": "2026-02-26T20:22:09.919837+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 43958,
+          "output_tokens": 21513,
+          "total_tokens": 65471,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 4730,
+              "output_tokens": 649,
+              "total_tokens": 5379,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 4460,
+              "output_tokens": 0,
+              "total_tokens": 4460,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 33913,
+              "output_tokens": 19442,
+              "total_tokens": 53355,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 855,
+              "output_tokens": 1422,
+              "total_tokens": 2277,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "405",
+      "paper_title": "GoCa: Trustworthy Multi-Modal RAG with Explicit Thinking Distillation for Reliable Decision-Making in Med-LVLMs",
+      "workflow_run_id": "e9e5ec86-2d50-49ba-b5d3-d822b5e8ff73",
+      "run_number": 1,
+      "status": "completed",
+      "created_at": "2026-02-25T10:29:30.507370+00:00",
+      "started_at": "2026-02-25T10:29:30.557005+00:00",
+      "completed_at": null,
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 45921,
+          "output_tokens": 2938,
+          "total_tokens": 48859,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 6000,
+              "output_tokens": 304,
+              "total_tokens": 6304,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 5697,
+              "output_tokens": 0,
+              "total_tokens": 5697,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 33408,
+              "output_tokens": 2079,
+              "total_tokens": 35487,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 816,
+              "output_tokens": 555,
+              "total_tokens": 1371,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "402",
+      "paper_title": "GLM-SFNet: Global-Local Vision-Mamba with Semantic Fusion for Medical Image Segmentation",
+      "workflow_run_id": "786da3fe-c5fe-4e56-b326-9e5d63e21073",
+      "run_number": 1,
+      "status": "failed",
+      "created_at": "2026-02-25T10:52:21.542053+00:00",
+      "started_at": "2026-02-25T10:52:21.582236+00:00",
+      "completed_at": "2026-02-25T10:53:33.983749+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 44476,
+          "output_tokens": 2794,
+          "total_tokens": 47270,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 6214,
+              "output_tokens": 229,
+              "total_tokens": 6443,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 5070,
+              "output_tokens": 0,
+              "total_tokens": 5070,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 32400,
+              "output_tokens": 2083,
+              "total_tokens": 34483,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 792,
+              "output_tokens": 482,
+              "total_tokens": 1274,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "322",
+      "paper_title": "Endplate3D-QCT: A High-Resolution Dataset and Benchmark for Automated 3D Segmentation of Lumbar Vertebral Endplates in QCT",
+      "workflow_run_id": "5cf0fad1-f29b-4cff-a9a7-510a009e8709",
+      "run_number": 1,
+      "status": "completed",
+      "created_at": "2026-02-25T17:38:00.020272+00:00",
+      "started_at": "2026-02-25T17:38:00.062655+00:00",
+      "completed_at": "2026-02-25T17:48:01.443675+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 38259,
+          "output_tokens": 2831,
+          "total_tokens": 41090,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 5288,
+              "output_tokens": 210,
+              "total_tokens": 5498,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 4444,
+              "output_tokens": 0,
+              "total_tokens": 4444,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 27594,
+              "output_tokens": 2123,
+              "total_tokens": 29717,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 933,
+              "output_tokens": 498,
+              "total_tokens": 1431,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 61176,
+          "output_tokens": 1460,
+          "total_tokens": 62636,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "completed",
+              "input_tokens": 6100,
+              "output_tokens": 50,
+              "total_tokens": 6150,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "completed",
+              "input_tokens": 55076,
+              "output_tokens": 1410,
+              "total_tokens": 56486,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 14609,
+          "output_tokens": 1027,
+          "total_tokens": 15636,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 14609,
+              "output_tokens": 1027,
+              "total_tokens": 15636,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "157",
+      "paper_title": "CAT-SG: A Large Dynamic Scene Graph Dataset for Fine-Grained Understanding of Cataract Surgery",
+      "workflow_run_id": "6008de13-b114-4c0a-a2e1-d532ab602e96",
+      "run_number": 1,
+      "status": "completed",
+      "created_at": "2026-02-25T15:13:10.697451+00:00",
+      "started_at": "2026-02-25T15:13:10.741845+00:00",
+      "completed_at": "2026-02-25T15:31:40.416678+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 36378,
+          "output_tokens": 2880,
+          "total_tokens": 39258,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 5019,
+              "output_tokens": 266,
+              "total_tokens": 5285,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 5121,
+              "output_tokens": 0,
+              "total_tokens": 5121,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 25272,
+              "output_tokens": 2179,
+              "total_tokens": 27451,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 966,
+              "output_tokens": 435,
+              "total_tokens": 1401,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 68539,
+          "output_tokens": 1250,
+          "total_tokens": 69789,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "completed",
+              "input_tokens": 9250,
+              "output_tokens": 15,
+              "total_tokens": 9265,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "completed",
+              "input_tokens": 59289,
+              "output_tokens": 1235,
+              "total_tokens": 60524,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 12214,
+          "output_tokens": 987,
+          "total_tokens": 13201,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 12214,
+              "output_tokens": 987,
+              "total_tokens": 13201,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "129",
+      "paper_title": "Boosting 3D Liver Shape Datasets with Diffusion Models and Implicit Neural Representations",
+      "workflow_run_id": "737be755-0001-4039-be5a-f5e2ceed5f2a",
+      "run_number": 1,
+      "status": "failed",
+      "created_at": "2026-02-25T14:19:08.090297+00:00",
+      "started_at": "2026-02-25T14:19:08.133026+00:00",
+      "completed_at": "2026-02-25T14:20:41.581800+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 37491,
+          "output_tokens": 2873,
+          "total_tokens": 40364,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 5002,
+              "output_tokens": 258,
+              "total_tokens": 5260,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 4644,
+              "output_tokens": 0,
+              "total_tokens": 4644,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 26875,
+              "output_tokens": 2127,
+              "total_tokens": 29002,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 970,
+              "output_tokens": 488,
+              "total_tokens": 1458,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "skipped",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 13355,
+          "output_tokens": 961,
+          "total_tokens": 14316,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 13355,
+              "output_tokens": 961,
+              "total_tokens": 14316,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "47",
+      "paper_title": "A Novel ED Triage Framework Using Conditional Imputation, Multi-Scale Semantic Learning, and Cross-Modal Fusion",
+      "workflow_run_id": "2d27cf5e-01a6-40ff-9e42-1f144d3160a1",
+      "run_number": 1,
+      "status": "completed",
+      "created_at": "2026-02-24T14:26:34.623066+00:00",
+      "started_at": "2026-02-24T14:26:34.659279+00:00",
+      "completed_at": "2026-02-24T14:28:19.456022+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 37943,
+          "output_tokens": 2903,
+          "total_tokens": 40846,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 5192,
+              "output_tokens": 217,
+              "total_tokens": 5409,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 4641,
+              "output_tokens": 0,
+              "total_tokens": 4641,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 27153,
+              "output_tokens": 2178,
+              "total_tokens": 29331,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 957,
+              "output_tokens": 508,
+              "total_tokens": 1465,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 105234,
+          "output_tokens": 1304,
+          "total_tokens": 106538,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "completed",
+              "input_tokens": 18180,
+              "output_tokens": 80,
+              "total_tokens": 18260,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "completed",
+              "input_tokens": 87054,
+              "output_tokens": 1224,
+              "total_tokens": 88278,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "35",
+      "paper_title": "A Diffusion-Driven Temporal Super-Resolution and Spatial Consistency Enhancement Framework for 4D MRI imaging",
+      "workflow_run_id": "0bafaeea-8b64-4ebc-ad17-0f918d4a99de",
+      "run_number": 1,
+      "status": "completed",
+      "created_at": "2026-02-24T14:23:45.563778+00:00",
+      "started_at": "2026-02-24T14:23:45.666189+00:00",
+      "completed_at": "2026-02-24T14:25:55.465260+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 36305,
+          "output_tokens": 2891,
+          "total_tokens": 39196,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 4459,
+              "output_tokens": 247,
+              "total_tokens": 4706,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 4522,
+              "output_tokens": 0,
+              "total_tokens": 4522,
+              "was_cached": false
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 26360,
+              "output_tokens": 2194,
+              "total_tokens": 28554,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 964,
+              "output_tokens": 450,
+              "total_tokens": 1414,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 120440,
+          "output_tokens": 1388,
+          "total_tokens": 121828,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "completed",
+              "input_tokens": 52533,
+              "output_tokens": 198,
+              "total_tokens": 52731,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "completed",
+              "input_tokens": 67907,
+              "output_tokens": 1190,
+              "total_tokens": 69097,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "paper_id": "29",
+      "paper_title": "6D Object Pose Tracking for Orthopedic Surgical Training using Visual-Inertial Sensor Fusion",
+      "workflow_run_id": "da6337a2-9a4e-45df-ac27-480b80fbfc2c",
+      "run_number": 1,
+      "status": "completed",
+      "created_at": "2026-02-24T14:23:45.738731+00:00",
+      "started_at": "2026-02-24T14:23:45.790972+00:00",
+      "completed_at": "2026-02-24T14:25:29.506876+00:00",
+      "grouped_tokens": {
+        "paper": {
+          "input_tokens": 35646,
+          "output_tokens": 2818,
+          "total_tokens": 38464,
+          "nodes": [
+            {
+              "node_id": "paper_type_classification",
+              "status": "completed",
+              "input_tokens": 4742,
+              "output_tokens": 230,
+              "total_tokens": 4972,
+              "was_cached": false
+            },
+            {
+              "node_id": "section_embeddings",
+              "status": "completed",
+              "input_tokens": 4898,
+              "output_tokens": 0,
+              "total_tokens": 4898,
+              "was_cached": true
+            },
+            {
+              "node_id": "reproducibility_checklist",
+              "status": "completed",
+              "input_tokens": 25055,
+              "output_tokens": 2091,
+              "total_tokens": 27146,
+              "was_cached": false
+            },
+            {
+              "node_id": "final_aggregation",
+              "status": "completed",
+              "input_tokens": 951,
+              "output_tokens": 497,
+              "total_tokens": 1448,
+              "was_cached": false
+            }
+          ]
+        },
+        "code": {
+          "input_tokens": 122299,
+          "output_tokens": 1475,
+          "total_tokens": 123774,
+          "nodes": [
+            {
+              "node_id": "code_embedding",
+              "status": "completed",
+              "input_tokens": 45876,
+              "output_tokens": 150,
+              "total_tokens": 46026,
+              "was_cached": false
+            },
+            {
+              "node_id": "code_repository_analysis",
+              "status": "completed",
+              "input_tokens": 76423,
+              "output_tokens": 1325,
+              "total_tokens": 77748,
+              "was_cached": false
+            }
+          ]
+        },
+        "dataset": {
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "total_tokens": 0,
+          "nodes": [
+            {
+              "node_id": "dataset_documentation_check",
+              "status": "completed",
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0,
+              "was_cached": false
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "aggregate_statistics": {
+    "total_papers": 10,
+    "papers_with_tokens": 10,
+    "by_group": {
+      "paper": {
+        "paper_count": 10,
+        "total_input_tokens": 361371,
+        "total_output_tokens": 44441,
+        "total_tokens": 405812,
+        "avg_input_tokens": 36137.1,
+        "avg_output_tokens": 4444.1,
+        "avg_total_tokens": 40581.2,
+        "var_input_tokens": 120624528.88999999,
+        "var_output_tokens": 33103670.49,
+        "var_total_tokens": 200774131.16,
+        "std_input_tokens": 10982.919870872225,
+        "std_output_tokens": 5753.578928805965,
+        "std_total_tokens": 14169.478859859313
+      },
+      "code": {
+        "paper_count": 5,
+        "total_input_tokens": 477688,
+        "total_output_tokens": 6877,
+        "total_tokens": 484565,
+        "avg_input_tokens": 95537.6,
+        "avg_output_tokens": 1375.4,
+        "avg_total_tokens": 96913.0,
+        "var_input_tokens": 667993237.04,
+        "var_output_tokens": 7611.839999999999,
+        "var_total_tokens": 669107055.2,
+        "std_input_tokens": 25845.565132919804,
+        "std_output_tokens": 87.24585950060896,
+        "std_total_tokens": 25867.103726548128
+      },
+      "dataset": {
+        "paper_count": 3,
+        "total_input_tokens": 40178,
+        "total_output_tokens": 2975,
+        "total_tokens": 43153,
+        "avg_input_tokens": 13392.666666666666,
+        "avg_output_tokens": 991.6666666666666,
+        "avg_total_tokens": 14384.333333333334,
+        "var_input_tokens": 956713.5555555555,
+        "var_output_tokens": 736.8888888888888,
+        "var_total_tokens": 990538.8888888889,
+        "std_input_tokens": 978.1173526502612,
+        "std_output_tokens": 27.145697428669774,
+        "std_total_tokens": 995.2582021208813
+      }
+    },
+    "grand_total": {
+      "total_input_tokens": 879237,
+      "total_output_tokens": 54293,
+      "total_tokens": 933530
+    },
+    "grand_average": {
+      "papers_with_tokens": 10,
+      "avg_input_tokens": 87923.7,
+      "avg_output_tokens": 5429.3,
+      "avg_total_tokens": 93353.0,
+      "var_input_tokens": 2806462059.21,
+      "var_output_tokens": 30807737.209999997,
+      "var_total_tokens": 2793892419.2,
+      "std_input_tokens": 52976.05175180574,
+      "std_output_tokens": 5550.471800667038,
+      "std_total_tokens": 52857.28350189782
+    }
+  }
+}
