@@ -4,7 +4,7 @@ Extract token usage data from workflow nodes for the latest run of each paper
 using paper_processing_with_reproducibility workflow, grouped by node category.
 
 Usage:
-    docker exec -it django-web-dev-bolelli python extract_workflow_token_data.py
+    docker exec -it django-web-DEV-STACK python extract_workflow_token_data.py
 """
 
 import os
