@@ -1,23 +1,11 @@
 {
-  "paper_analysis_by_category": {
-    "models": "3/7",
-    "datasets": "3/4",
-    "experiments": "6/9"
+  "reproducibility_score": 100.0,
+  "score_breakdown": {
+    "code_completeness": 100.0,
+    "dependencies": 100.0,
+    "artifacts": 100.0,
+    "dataset_splits": 100.0,
+    "documentation": 100.0
   },
-  "code_analysis": {
-    "score_breakdown": {
-      "code_completeness": 100.0,
-      "dependencies": 100.0,
-      "artifacts": 100.0,
-      "dataset_splits": 100.0,
-      "documentation": 100.0
-    },
-    "reproducibility_score": 100.0,
-    "recommendations": []
-  },
-  "dataset_analysis_by_category": {
-    "data_collection": "0/3",
-    "annotation": "3/4",
-    "ethics_availability": "2/3"
-  }
+  "recommendations": []
 }
